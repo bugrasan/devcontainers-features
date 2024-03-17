@@ -21,7 +21,7 @@
         }
     },
     "installsAfter": [
-        "ghcr.io/devcontainers/features/common-utils"
+        "ghcr.io/devcontainers/features/java"
     ],
     "containerEnv": {
         "PATH": "/opt/structurizr-cli/:${PATH}",
