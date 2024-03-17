@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-echo "Activating feature 'structurizr'"
+echo "Activating feature 'structurizr-cli'"
 
 STRZR_VERSION=${VERSION:-"latest"}
 echo "The provided version is: $STRZR_VERSION"
 STRZR_MISSING_INSTALLED=0
 strzr_install="/opt/structurizr-cli"
-strzr_bin="/opt/structurizr-cli/structurizr.sh"
+strzr_bin="${strzr_install}/structurizr.sh"
 strzr_pkg="structurizr-cli.zip"
 
 

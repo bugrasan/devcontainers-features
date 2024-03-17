@@ -1,7 +1,7 @@
 {
     // https://containers.dev/implementors/features/
-    "name": "structurizr",
-    "id": "structurizr",
+    "name": "Structurizr-CLI",
+    "id": "structurizr-cli",
     "version": "0.1",
     "description": "This is devcontainers feature for [Structurizr-CLI](https://github.com/structurizr/cli) - a command line utility for Structurizr, designed to be used in conjunction with the Structurizr DSL.",
     "documentationURL": "https://docs.structurizr.com/cli",
@@ -17,9 +17,11 @@
                 "v2024.02.22",
                 "v2024.01.02"
             ],
-            "description": "Select structurizr release"
+            "description": "Select structurizr-cli release"
         }
     },
+    // FIXME: make this `dependsOn`
+    // https://containers.dev/implementors/features/#dependsOn
     "installsAfter": [
         "ghcr.io/devcontainers/features/java"
     ],

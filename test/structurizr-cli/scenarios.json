@@ -6,7 +6,7 @@
                 "version": "latest",
                 "jdkDistro": "open",
             },
-            "structurizr": {}
+            "structurizr-cli": {}
         }
     },
     "v2024_01_02": {
@@ -16,7 +16,7 @@
                 "version": "latest",
                 "jdkDistro": "open",
             },
-            "structurizr": {
+            "structurizr-cli": {
                 "version": "v2024.01.02"
             }
         }
