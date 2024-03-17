@@ -2,7 +2,7 @@
     // https://containers.dev/implementors/features/
     "name": "Structurizr-CLI",
     "id": "structurizr-cli",
-    "version": "0.1",
+    "version": "0.0.1",
     "description": "This is devcontainers feature for [Structurizr-CLI](https://github.com/structurizr/cli) - a command line utility for Structurizr, designed to be used in conjunction with the Structurizr DSL.",
     "documentationURL": "https://docs.structurizr.com/cli",
     "keywords": ["structurizr", "structurizr-cli", "structurizr-dsl", "c4model", "architecture"],
@@ -12,12 +12,37 @@
             "default": "latest",
             "proposals": [
                 "latest",
-                "v2024.03.03",
-                "v2024.03.02",
-                "v2024.02.22",
-                "v2024.01.02"
+                "2024.03.03",
+                "2024.03.02",
+                "2024.02.22",
+                "2024.01.02"
             ],
             "description": "Select structurizr-cli release"
+        },
+        "jdkInstall": {
+            "default": false,
+            "description": "Select whether to install JDK",
+            "type": "boolean"
+        },
+        "jdkVersion": {
+            "default": "latest",
+            "description": "Select or enter a JDK version to install; supported version >= 17",
+            "proposals": [
+                "latest",
+                "17",
+            ],
+            "type": "string"
+        },
+        "jdkDistro": {
+            "default": "open",
+            "description": "Select or enter a JDK distribution to install.",
+            "proposals": [
+                "ms",
+                "open",
+                "oracle",
+                "tem"
+            ],
+            "type": "string"
         }
     },
     // FIXME: make this `dependsOn`

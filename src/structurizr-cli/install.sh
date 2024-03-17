@@ -1,64 +1,61 @@
-#!/bin/bash
+#!/bin/sh
+
+# exit on error
 set -e
 
-echo "Activating feature 'structurizr-cli'"
+# variables provided by devcontainer-feature
+STRZR_VERSION="${VERSION:-"latest"}"
+JDK_INSTALL="${JDKINSTALL:-"false"}"
+JDK_DISTRO="${JDKDISTRO:-"open"}"
+JDK_VERSION="${JDKVERSION:-"latest"}"
 
-STRZR_VERSION=${VERSION:-"latest"}
-echo "The provided version is: $STRZR_VERSION"
-STRZR_MISSING_INSTALLED=0
-strzr_install="/opt/structurizr-cli"
-strzr_bin="${strzr_install}/structurizr.sh"
+# variables
+strzr_path="/opt/structurizr-cli"
+strzr_bin="${strzr_path}/structurizr.sh"
 strzr_pkg="structurizr-cli.zip"
 
 
 # The 'install.sh' entrypoint script is always executed as the root user.
-#
-# These following environment variables are passed in by the dev container CLI.
-# These may be useful in instances where the context of the final 
-# remoteUser or containerUser is useful.
 # For more details, see https://containers.dev/implementors/features#user-env-var
-# echo "The effective dev container remoteUser is '$_REMOTE_USER'"
-# echo "The effective dev container remoteUser's home directory is '$_REMOTE_USER_HOME'"
 
-# echo "The effective dev container containerUser is '$_CONTAINER_USER'"
-# echo "The effective dev container containerUser's home directory is '$_CONTAINER_USER_HOME'"
+# shellcheck source=library_scripts.sh
+source ./library_scripts.sh
 
+# nanolayer is a cli utility which keeps container layers as small as possible
+# source code: https://github.com/devcontainers-contrib/nanolayer
+# `ensure_nanolayer` is a bash function that will find any existing nanolayer installations, 
+# and if missing - will download a temporary copy that automatically get deleted at the end 
+# of the script
+ensure_nanolayer nanolayer_location "v0.4.29"
 
-# taken from deno-devcontainers-feature
-# Checks if packages are installed and installs them if not
-check_packages() {
-	if ! dpkg -s "$@" >/dev/null 2>&1; then
-		if [ "$(find /var/lib/apt/lists/* | wc -l)" = "0" ]; then
-			echo "Running apt-get update..."
-			apt-get update -y
-		fi
-		apt-get -y install --no-install-recommends "$@"
-        STRZR_MISSING_INSTALLED=1
-        apt-get clean
+if [ "${JDK_INSTALL}" = "true" ]; then
+	if [ "${JDK_VERSION}" = "latest" || $((JDK_VERSION)) >= 17 ]; then
+		$nanolayer_location \
+			install \
+			devcontainer-feature \
+			"ghcr.io/devcontainers/features/java:1.2.1" \
+			--option jdkDistro="${JDK_DISTRO}" --option version="${JDK_VERSION}"
+	else 
+		echo "jdkVersion isn't supported; Structurizr-CLI supports JDK >= 17" && exit 1
 	fi
-}
-# make sure we have curl
-check_packages ca-certificates curl
+fi
 
-# FIXME: check java version >= 17
+# we need these packages to retrieve & unpack `structurizr-cli`
+$nanolayer_location \
+	install \
+	apt \
+	ca-certificates,curl,unzip
 
-
-if [ "${STRZR_VERSION}" == "latest" ]; then
+if [ "${STRZR_VERSION}" = "latest" ]; then
 	strzr_uri="https://github.com/structurizr/cli/releases/latest/download/${strzr_pkg}"
 else
 	strzr_uri="https://github.com/structurizr/cli/releases/download/v${STRZR_VERSION}/${strzr_pkg}"
 fi
 
-
-curl --fail --location --progress-bar --output "${strzr_pkg}" "$strzr_uri"
-unzip -d "$bin_dir" -o "${strzr_pkg}"
-#chmod +x "$exe"
+curl --fail --location --progress-bar --output "/tmp/${strzr_pkg}" "${strzr_uri}"
+unzip -d "${strzr_path}" -o "/tmp/${strzr_pkg}"
 rm "${strzr_pkg}"
 
-if [ $STRZR_MISSING_INSTALLED -eq 1 ]; then
-    echo "cleaning from installed packages"
-    apt-get remove -y ca-certificates curl
-fi
+echo "The structurizr-cli has been installed to '${strzr_path}' and can run it with '${strzr_bin}'"
 
-echo "The structurizr-cli has been installed to $strzr_install"
-echo "You can run it with $strzr_bin"
+echo 'Done!'
