@@ -1,0 +1,29 @@
+{
+    // https://containers.dev/implementors/features/
+    "name": "structurizr",
+    "id": "structurizr",
+    "version": "0.1",
+    "description": "This is devcontainers feature for [Structurizr-CLI](https://github.com/structurizr/cli) - a command line utility for Structurizr, designed to be used in conjunction with the Structurizr DSL.",
+    "documentationURL": "https://docs.structurizr.com/cli",
+    "keywords": ["structurizr", "structurizr-cli", "structurizr-dsl", "c4model", "architecture"],
+    "options": {
+        "version": {
+            "type": "string",
+            "default": "latest",
+            "proposals": [
+                "latest",
+                "v2024.03.03",
+                "v2024.03.02",
+                "v2024.02.22",
+                "v2024.01.02"
+            ],
+            "description": "Select structurizr release"
+        }
+    },
+    "installsAfter": [
+        "ghcr.io/devcontainers/features/common-utils"
+    ],
+    "containerEnv": {
+        "PATH": "/opt/structurizr-cli/:${PATH}",
+    }
+}
