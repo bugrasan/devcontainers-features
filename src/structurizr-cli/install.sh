@@ -29,7 +29,7 @@ source ./library_scripts.sh
 ensure_nanolayer nanolayer_location "v0.4.29"
 
 if [ "${JDK_INSTALL}" = "true" ]; then
-	if [ "${JDK_VERSION}" = "latest" || $((JDK_VERSION)) >= 17 ]; then
+	if [ "${JDK_VERSION}" = "latest" ] || [ $((JDK_VERSION)) -ge 17 ]; then
 		$nanolayer_location \
 			install \
 			devcontainer-feature \
