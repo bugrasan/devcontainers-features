@@ -17,7 +17,7 @@ This is devcontainers feature for [Structurizr-CLI](https://github.com/structuri
 |-----|-----|-----|-----|
 | version | Select structurizr-cli release | string | latest |
 | jdkInstall | Select whether to install JDK. | boolean | false |
-| jdkVersion | Select or enter a JDK version to install; supported version >= 17 | string | latest |
+| jdkVersion | Select or enter a JDK version to install; supported version >= 17. | string | latest |
 | jdkDistro | Select or enter a JDK distribution to install. | string | open |
 
 # NOTES
