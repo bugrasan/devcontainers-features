@@ -12,7 +12,7 @@ JDK_VERSION="${JDKVERSION:-"latest"}"
 # variables
 strzr_path="/opt/structurizr-cli"
 strzr_bin="${strzr_path}/structurizr.sh"
-strzr_pkg="structurizr-cli.zip"
+strzr_pkg="/tmp/structurizr-cli.zip"
 
 
 # The 'install.sh' entrypoint script is always executed as the root user.
@@ -57,8 +57,8 @@ else
 	strzr_uri="https://github.com/structurizr/cli/releases/download/v${STRZR_VERSION}/${strzr_pkg}"
 fi
 
-curl --fail --location --progress-bar --output "/tmp/${strzr_pkg}" "${strzr_uri}"
-unzip -d "${strzr_path}" -o "/tmp/${strzr_pkg}"
+curl --fail --location --progress-bar --output "${strzr_pkg}" "${strzr_uri}"
+unzip -d "${strzr_path}" -o "${strzr_pkg}"
 rm "${strzr_pkg}"
 
 echo "The structurizr-cli has been installed to '${strzr_path}' and can run it with '${strzr_bin}'"
