@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # exit on error
-set -ex
+set -e
 
 # variables provided by devcontainer-feature
 STRZR_VERSION="${VERSION:-"latest"}"
