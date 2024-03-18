@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # exit on error
-set -e
+set -ex
 
 # variables provided by devcontainer-feature
 STRZR_VERSION="${VERSION:-"latest"}"
@@ -12,7 +12,8 @@ JDK_VERSION="${JDKVERSION:-"latest"}"
 # variables
 strzr_path="/opt/structurizr-cli"
 strzr_bin="${strzr_path}/structurizr.sh"
-strzr_pkg="/tmp/structurizr-cli.zip"
+strzr_pkg="structurizr-cli.zip"
+strzr_pkg_file="/tmp/${strzr_pkg}"
 
 
 # The 'install.sh' entrypoint script is always executed as the root user.
@@ -26,7 +27,7 @@ source ./library_scripts.sh
 # `ensure_nanolayer` is a bash function that will find any existing nanolayer installations, 
 # and if missing - will download a temporary copy that automatically get deleted at the end 
 # of the script
-ensure_nanolayer nanolayer_location "v0.4.29"
+ensure_nanolayer nanolayer_location "v0.4.46"
 
 if [ "${JDK_INSTALL}" = "true" ]; then
 	if [ "${JDK_VERSION}" = "latest" ] || [ $((JDK_VERSION)) -ge 17 ]; then
@@ -57,9 +58,9 @@ else
 	strzr_uri="https://github.com/structurizr/cli/releases/download/v${STRZR_VERSION}/${strzr_pkg}"
 fi
 
-curl --fail --location --progress-bar --output "${strzr_pkg}" "${strzr_uri}"
-unzip -d "${strzr_path}" -o "${strzr_pkg}"
-rm "${strzr_pkg}"
+curl --fail --location --progress-bar --output "${strzr_pkg_file}" "${strzr_uri}"
+unzip -d "${strzr_path}" -o "${strzr_pkg_file}"
+rm "${strzr_pkg_file}"
 
 echo "The structurizr-cli has been installed to '${strzr_path}' and can run it with '${strzr_bin}'"
 
