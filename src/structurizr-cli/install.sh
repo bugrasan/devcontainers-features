@@ -41,10 +41,15 @@ if [ "${JDK_INSTALL}" = "true" ]; then
 fi
 
 # we need these packages to retrieve & unpack `structurizr-cli`
+# $nanolayer_location \
+# 	install \
+# 	apt \
+# 	ca-certificates,curl,unzip
 $nanolayer_location \
 	install \
-	apt \
-	ca-certificates,curl,unzip
+	devcontainer-feature \
+	"ghcr.io/devcontainers-contrib/features/apt-packages:1.0.4" \
+	--option packages=ca-certificates,curl,unzip 
 
 if [ "${STRZR_VERSION}" = "latest" ]; then
 	strzr_uri="https://github.com/structurizr/cli/releases/latest/download/${strzr_pkg}"
