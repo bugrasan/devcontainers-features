@@ -2,22 +2,22 @@
     "latest": {
         "image": "mcr.microsoft.com/devcontainers/base:debian",
         "features": {
-            "ghcr.io/devcontainers/features/java:1": {
+            "ghcr.io/devcontainers/features/java": {
                 "version": "latest",
                 "jdkDistro": "open",
             },
             "structurizr-cli": {}
         }
     },
-    "v2024_01_02": {
+    "past_release": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
-            "ghcr.io/devcontainers/features/java:1": {
+            "ghcr.io/devcontainers/features/java": {
                 "version": "latest",
                 "jdkDistro": "open",
             },
             "structurizr-cli": {
-                "version": "v2024.01.02"
+                "version": "2024.02.22"
             }
         }
     }

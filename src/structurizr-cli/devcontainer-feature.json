@@ -2,7 +2,7 @@
     // https://containers.dev/implementors/features/
     "name": "Structurizr-CLI",
     "id": "structurizr-cli",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "description": "This is devcontainers feature for [Structurizr-CLI](https://github.com/structurizr/cli) - a command line utility for Structurizr, designed to be used in conjunction with the Structurizr DSL.",
     "documentationURL": "https://docs.structurizr.com/cli",
     "keywords": ["structurizr", "structurizr-cli", "structurizr-dsl", "c4model", "architecture"],
@@ -15,7 +15,6 @@
                 "2024.03.03",
                 "2024.03.02",
                 "2024.02.22",
-                "2024.01.02"
             ],
             "description": "Select structurizr-cli release"
         },

@@ -6,7 +6,7 @@
 set -e
 
 # NOTE: without the 'v' prefix in version
-TEST_VERSION="2024.01.02"
+TEST_VERSION="2024.02.22"
 
 # Optional: Import test library bundled with the devcontainer CLI
 source dev-container-features-test-lib
