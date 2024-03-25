@@ -1,0 +1,22 @@
+{
+    // https://containers.dev/implementors/features/
+    "name": "twilio-cli",
+    "id": "twilio-cli",
+    "version": "0.0.1",
+    "description": "The Twilio CLI allows you to manage your Twilio resources from your terminal or command prompt. Let's get it installed and take a quick tour.",
+    "documentationURL": "https://www.twilio.com/docs/twilio-cli",
+    "keywords": ["twilio-cli"],
+    "options": {
+        "version": {
+            "type": "string",
+            "default": "latest",
+            "proposals": [
+                "latest",
+            ],
+            "description": "Select twilio-cli release"
+        },
+    },
+    // "installsAfter": [
+    //     "ghcr.io/devcontainers/features/java"
+    // ],
+}
