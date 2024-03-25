@@ -1,0 +1,16 @@
+{
+    "blank": {
+        "image": "mcr.microsoft.com/devcontainers/base:debian",
+        "features": {
+            "twilio-cli": {}
+        }
+    },
+    "latest": {
+        "image": "mcr.microsoft.com/devcontainers/base:debian",
+        "features": {
+            "twilio-cli": {
+				"version": "latest"
+			}
+        }
+    }
+}
