@@ -43,5 +43,8 @@ $nanolayer_location \
 	"ghcr.io/devcontainers-contrib/features/apt-packages:1.0.4" \
 	--option packages=twilio
 
+# FIXME: add to default user vscode
+# add autocomplete
+printf "eval $(twilio autocomplete:script bash)" >> ~/.bashrc; source ~/.bashrc
 
 echo 'Done!'
