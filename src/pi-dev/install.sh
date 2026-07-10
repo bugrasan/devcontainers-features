@@ -17,6 +17,14 @@ TARGET_USER="${_REMOTE_USER:-root}"
 # https://github.com/bugrasan/devcontainer-base-ai/actions/runs/29093012572
 # It runs 'npm install -g' under the invoking user, so it must run as the
 # container's remote user, not root.
-su - "${TARGET_USER}" -c "curl -fsSL https://pi.dev/install.sh | sh"
+#
+# NOTE: plain 'su' (no '-'/login flag) on purpose - confirmed by a failing CI
+# run (https://github.com/bugrasan/devcontainers-features/pull/13) that a
+# login shell resets PATH to the target user's default profile PATH,
+# discarding the PATH addition the node Feature bakes into the image via its
+# own containerEnv - which is exactly why pi.dev's installer couldn't find
+# node/npm despite installsAfter: node having run first. Plain su still sets
+# HOME/USER correctly for the target user without wiping inherited PATH.
+su "${TARGET_USER}" -c "curl -fsSL https://pi.dev/install.sh | sh"
 
 echo 'Done!'
