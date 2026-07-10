@@ -8,8 +8,22 @@ set -e
 TARGET_USER="${_REMOTE_USER:-root}"
 
 # pi.dev/install.sh hard-requires Node.js >=22.19.0 and npm to already be
-# present (it exits with "error: npm is required to install Pi." otherwise) -
-# that's what 'installsAfter: node' in devcontainer-feature.json guarantees.
+# present (it exits with "error: npm is required to install Pi." otherwise).
+# 'installsAfter: node' in devcontainer-feature.json only guarantees this
+# Feature's RUN layer executes after node's RUN layer (so node's files exist
+# on disk) - it does NOT make node's own containerEnv (its PATH/NVM_DIR
+# additions) active during a sibling Feature's install.sh at build time; that
+# containerEnv only takes effect in the final container's runtime
+# environment. Confirmed by a failing CI check where pi.dev's installer
+# couldn't find node/npm at all despite node having installed successfully
+# first: https://github.com/bugrasan/devcontainers-features/pull/13
+#
+# So node/npm must be resolved explicitly here, using the same stable
+# 'current' version symlink the node Feature's own containerEnv references:
+# https://github.com/devcontainers/features/blob/main/src/node/devcontainer-feature.json
+NVM_DIR="${NVM_DIR:-/usr/local/share/nvm}"
+NODE_BIN_DIR="${NVM_DIR}/current/bin"
+
 # With node/npm present it installs fine non-interactively (no tty): it
 # detects "No terminal detected" and just proceeds with the default action
 # instead of aborting. Confirmed by running it non-interactively (no tty, no
@@ -17,14 +31,6 @@ TARGET_USER="${_REMOTE_USER:-root}"
 # https://github.com/bugrasan/devcontainer-base-ai/actions/runs/29093012572
 # It runs 'npm install -g' under the invoking user, so it must run as the
 # container's remote user, not root.
-#
-# NOTE: plain 'su' (no '-'/login flag) on purpose - confirmed by a failing CI
-# run (https://github.com/bugrasan/devcontainers-features/pull/13) that a
-# login shell resets PATH to the target user's default profile PATH,
-# discarding the PATH addition the node Feature bakes into the image via its
-# own containerEnv - which is exactly why pi.dev's installer couldn't find
-# node/npm despite installsAfter: node having run first. Plain su still sets
-# HOME/USER correctly for the target user without wiping inherited PATH.
-su "${TARGET_USER}" -c "curl -fsSL https://pi.dev/install.sh | sh"
+su "${TARGET_USER}" -c "export PATH='${NODE_BIN_DIR}:${PATH}'; curl -fsSL https://pi.dev/install.sh | sh"
 
 echo 'Done!'
