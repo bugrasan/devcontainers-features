@@ -17,6 +17,20 @@
             "description": "Release channel or exact version to install: 'stable', 'latest', or a semver like '1.2.3'."
         },
     },
-    // No installsAfter: confirmed the installer is a self-contained native
-    // binary download with no npm/node dependency (see install.sh).
+    // No functional dependency (confirmed the installer is a self-contained
+    // native binary download with no npm/node dependency - see install.sh),
+    // but installsAfter is still used here purely for build-cache ordering:
+    // this Feature tracks the 'latest' release channel and updates far more
+    // often than the Features below, and Docker's cache key chains
+    // sequentially - putting a frequently-changing Feature early would
+    // cascade-invalidate every Feature after it on most builds. Installing
+    // last keeps the stable prefix cache-hit even when this one changes.
+    "installsAfter": [
+        "ghcr.io/devcontainers/features/common-utils",
+        "ghcr.io/devcontainers/features/copilot-cli",
+        "ghcr.io/devcontainers/features/github-cli",
+        "ghcr.io/devcontainers/features/node",
+        "ghcr.io/devcontainers/features/python",
+        "ghcr.io/devcontainers/features/sshd",
+    ],
 }

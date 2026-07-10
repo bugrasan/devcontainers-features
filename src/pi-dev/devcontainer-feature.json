@@ -6,7 +6,18 @@
     "description": "Installs the Pi coding agent CLI via the official pi.dev installer. Requires Node.js >=22.19.0 and npm.",
     "documentationURL": "https://pi.dev",
     "keywords": ["pi", "pi.dev", "ai"],
+    // node is a hard dependency (this Feature needs npm). The rest are ordering-
+    // only hints: this Feature installs from npm at build time and tends to
+    // change often, and Docker's cache key chains sequentially - putting a
+    // frequently-changing Feature early would cascade-invalidate every
+    // Feature after it on most builds. Installing last keeps the stable
+    // prefix cache-hit even when this one changes.
     "installsAfter": [
         "ghcr.io/devcontainers/features/node",
+        "ghcr.io/devcontainers/features/common-utils",
+        "ghcr.io/devcontainers/features/copilot-cli",
+        "ghcr.io/devcontainers/features/github-cli",
+        "ghcr.io/devcontainers/features/python",
+        "ghcr.io/devcontainers/features/sshd",
     ],
 }
