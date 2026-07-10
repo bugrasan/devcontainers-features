@@ -1,0 +1,22 @@
+{
+    // https://containers.dev/implementors/features/
+    "name": "claude-code",
+    "id": "claude-code",
+    "version": "1.0.0",
+    "description": "Installs the Claude Code CLI (Anthropic's agentic coding tool) via its native installer.",
+    "documentationURL": "https://code.claude.com/docs/en/overview",
+    "keywords": ["claude", "claude-code", "anthropic", "ai"],
+    "options": {
+        "version": {
+            "type": "string",
+            "default": "latest",
+            "proposals": [
+                "stable",
+                "latest",
+            ],
+            "description": "Release channel or exact version to install: 'stable', 'latest', or a semver like '1.2.3'."
+        },
+    },
+    // No installsAfter: confirmed the installer is a self-contained native
+    // binary download with no npm/node dependency (see install.sh).
+}
