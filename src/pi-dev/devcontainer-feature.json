@@ -1,0 +1,12 @@
+{
+    // https://containers.dev/implementors/features/
+    "name": "pi-dev",
+    "id": "pi-dev",
+    "version": "1.0.0",
+    "description": "Installs the Pi coding agent CLI via the official pi.dev installer. Requires Node.js >=22.19.0 and npm.",
+    "documentationURL": "https://pi.dev",
+    "keywords": ["pi", "pi.dev", "ai"],
+    "installsAfter": [
+        "ghcr.io/devcontainers/features/node",
+    ],
+}
