@@ -90,10 +90,24 @@ find_version_from_git_tags VERSION "https://github.com/github/spec-kit"
 # npm-packages Features. uv itself is assumed to be on PATH already.
 su "${TARGET_USER}" -c "export PATH='${USER_LOCAL_BIN}:${PATH}'; uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v${VERSION}"
 
-# ~/.local/bin isn't on PATH for non-interactive/non-login shells by default, so
-# symlink the binary into /usr/local/bin (always on PATH) - same approach as the
-# claude-code Feature.
-ln -sf "${USER_LOCAL_BIN}/specify" /usr/local/bin/specify
+# Locate the launcher uv actually created. uv's executable dir varies by image:
+# usually ~/.local/bin, but some images (e.g. ghcr.io/astral-sh/uv:*) point
+# UV_TOOL_BIN_DIR / XDG_BIN_HOME at /usr/local/bin, so we must not hard-code the
+# path. Ask uv for its bin dir, then resolve the real 'specify' as the remote user.
+UV_BIN_DIR="$(su "${TARGET_USER}" -c "export PATH='${USER_LOCAL_BIN}:${PATH}'; uv tool dir --bin 2>/dev/null" 2>/dev/null || true)"
+SPECIFY_PATH="$(su "${TARGET_USER}" -c "export PATH='${UV_BIN_DIR:-${USER_LOCAL_BIN}}:${USER_LOCAL_BIN}:${PATH}'; command -v specify" 2>/dev/null || true)"
+if [ -z "${SPECIFY_PATH}" ]; then
+    echo "ERROR: 'specify' was installed by uv but could not be located on PATH." >&2
+    exit 1
+fi
+
+# Make 'specify' available on PATH for every shell (non-interactive/non-login
+# included) by symlinking into /usr/local/bin - same approach as the claude-code
+# Feature. Skip when uv already installed it there, so we never overwrite the real
+# binary with a symlink that points back to itself.
+if [ "${SPECIFY_PATH}" != "/usr/local/bin/specify" ]; then
+    ln -sf "${SPECIFY_PATH}" /usr/local/bin/specify
+fi
 
 # ---------------------------------------------------------------------------
 # Startup self-upgrade marker (mirrors the copilot-cli Feature). Writes a marker
