@@ -5,6 +5,7 @@ currently this repo contains the folling devcontainer features:
 - 'twilio-cli', see [Twilio CLI](https://www.twilio.com/docs/twilio-cli)
 - 'claude-code', see [Claude Code](https://code.claude.com/docs/en/overview)
 - 'pi-dev', see [Pi](https://pi.dev)
+- 'speckit', see [GitHub Spec Kit](https://github.com/github/spec-kit)
 
 
 ## structurizr-cli
@@ -34,5 +35,15 @@ Requires Node.js >=22.19.0 and npm - add a Feature that provides them (e.g.
 ```json
 "features": {
     "ghcr.io/bugrasan/devcontainers-features/pi-dev:1": {}
+}
+```
+
+## speckit
+Installs the `specify` CLI (Spec-Driven Development) via uv. Requires Python
+3.11+ and uv to already be present - add the `python` and a `uv` Feature before
+this one (both are already provided by the `devcontainer-base-ai` image).
+```json
+"features": {
+    "ghcr.io/bugrasan/devcontainers-features/speckit:1": {}
 }
 ```

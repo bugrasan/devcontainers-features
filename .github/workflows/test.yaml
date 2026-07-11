@@ -36,6 +36,7 @@ jobs:
         features:
           - structurizr-cli
           - pi-dev
+          - speckit
     steps:
       - uses: actions/checkout@v3
 

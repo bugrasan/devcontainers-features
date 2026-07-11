@@ -1,0 +1,44 @@
+{
+    // https://containers.dev/implementors/features/
+    "name": "speckit",
+    "id": "speckit",
+    "version": "1.0.0",
+    "description": "Installs GitHub Spec Kit's 'specify' CLI (Spec-Driven Development) via uv. Requires Python 3.11+ and uv to already be present.",
+    "documentationURL": "https://github.com/github/spec-kit",
+    "keywords": ["speckit", "spec-kit", "specify", "spec-driven-development", "sdd", "ai"],
+    "options": {
+        "version": {
+            "type": "string",
+            "default": "latest",
+            "proposals": [
+                "latest",
+                "0.12.11",
+            ],
+            "description": "spec-kit release to install: 'latest' (newest release tag, resolved at build time) or an exact release tag like '0.12.11'."
+        },
+    },
+    // Auto-update on each container start when installed as 'latest', mirroring the
+    // copilot-cli Feature (https://github.com/devcontainers/features/tree/main/src/copilot-cli).
+    // COMMENTED OUT for now - enable together with the marker block in install.sh:
+    // "postStartCommand": "[ -f /etc/devcontainer-speckit/auto-update ] && PATH=\"$HOME/.local/bin:$PATH\" specify self upgrade || true",
+    //
+    // uv + Python 3.11+ are hard prerequisites, but they are provided elsewhere (the
+    // base-image Dockerfile installs uv; the python Feature / OS provides Python), so
+    // they are intentionally NOT auto-installed here. installsAfter is ordering-only:
+    // when these Features are present, install speckit AFTER them. Because speckit
+    // tracks a fast-moving upstream, installing it last keeps Docker's sequential
+    // cache prefix warm for the slower-changing Features.
+    //
+    // FIXME: switch to `dependsOn` once uv is extracted into its own Dev Container
+    // Feature (today uv comes from the base-image Dockerfile, not a Feature). Then this
+    // Feature can declare python + uv as real dependencies and be fully self-contained
+    // / reusable standalone.
+    "installsAfter": [
+        "ghcr.io/devcontainers/features/common-utils",
+        "ghcr.io/devcontainers/features/python",
+        "ghcr.io/devcontainers/features/node",
+        "ghcr.io/devcontainers/features/github-cli",
+        "ghcr.io/devcontainers/features/copilot-cli",
+        "ghcr.io/devcontainers/features/sshd",
+    ],
+}
