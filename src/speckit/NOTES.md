@@ -7,13 +7,13 @@ install its runtime dependencies. Both must already be present:
 - **Python 3.11+** — required by spec-kit.
 
 On the pre-baked `devcontainer-base-ai` image both are already provided (uv from
-the Dockerfile, Python from the `python` Feature). On other images add them
-first, e.g.:
+the Dockerfile, Python from the `python` Feature). On other images make sure uv
+and Python 3.11+ are on `PATH` first: Python via the `python` Feature, and uv
+via your base image or Dockerfile (there is no first-party uv Feature).
 
 ```json
 "features": {
     "ghcr.io/devcontainers/features/python:1": { "version": "3.12" },
-    "ghcr.io/va-h/devcontainers-features/uv:1": {},
     "ghcr.io/bugrasan/devcontainers-features/speckit:1": {}
 }
 ```

@@ -2,7 +2,7 @@
     // https://containers.dev/implementors/features/
     "name": "speckit",
     "id": "speckit",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Installs GitHub Spec Kit's 'specify' CLI (Spec-Driven Development) via uv. Requires Python 3.11+ and uv to already be present.",
     "documentationURL": "https://github.com/github/spec-kit",
     "keywords": ["speckit", "spec-kit", "specify", "spec-driven-development", "sdd", "ai"],
