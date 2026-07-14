@@ -18,10 +18,18 @@ be installed separately and be on `PATH` for the plugin to activate:
 | `typescript-lsp` | `typescript-language-server` | `npm i -g typescript-language-server` |
 | `gopls-lsp` | `gopls` | Go toolchain + `go install golang.org/x/tools/gopls@latest` |
 
+A fresh Claude Code install has **no marketplaces registered**, so each
+marketplace repo in `lspMarketplaces` (default `anthropics/claude-plugins-official`,
+which provides the `claude-plugins-official` marketplace) is added via
+`claude plugin marketplace add <owner/repo> --scope user` **before** the plugins
+are installed. If you point `lspPlugins` at a plugin from another marketplace,
+add that marketplace's repo to `lspMarketplaces` too.
+
 Set `lspPlugins` to `""` to skip plugin installation, or override it with your
-own space-separated list. Plugin installs are non-fatal: a missing binary or
-marketplace hiccup will not fail the build (check `claude plugin list` and the
-Errors tab; `Executable not found in $PATH` means the binary is missing).
+own space-separated list. Marketplace-add and plugin installs are non-fatal: a
+missing binary or marketplace hiccup will not fail the build (check
+`claude plugin list` and the Errors tab; `Executable not found in $PATH` means
+the binary is missing).
 
 ## Updates
 

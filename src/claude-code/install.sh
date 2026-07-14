@@ -43,33 +43,25 @@ ln -sf "${TARGET_HOME}/.local/bin/claude" /usr/local/bin/claude
 # the server BINARY (pyright-langserver, typescript-language-server, gopls, ...)
 # must be installed separately and be on PATH for the plugin to activate. A
 # missing binary, an unregistered marketplace, or a transient network error must
-# NOT fail the image build, so each install is guarded with '|| echo WARNING'.
+# NOT fail the image build, so each step is guarded with '|| echo WARNING'.
 #
-# The 'claude-plugins-official' marketplace is auto-registered, but a fresh
-# Claude Code install ships a stale/empty marketplace index, so 'plugin install'
-# fails with "not found in marketplace ... try 'claude plugin marketplace
-# update'". Refresh each referenced marketplace's index FIRST (dedup'd) so the
-# plugins resolve.
+# A fresh Claude Code install has NO marketplaces registered (confirmed: the
+# 'claude-plugins-official' marketplace is NOT auto-available - 'plugin install
+# <p>@claude-plugins-official' fails with "not found in marketplace" and
+# 'marketplace update' reports "Available marketplaces:" empty). So each
+# marketplace repo in LSP_MARKETPLACES must be ADDED FIRST (at user scope,
+# matching the plugin install scope) before the plugins can resolve.
 LSP_PLUGINS="${LSPPLUGINS:-}"
+LSP_MARKETPLACES="${LSPMARKETPLACES:-}"
 if [ -n "${LSP_PLUGINS}" ]; then
-    seen_marketplaces=""
-    for plugin in ${LSP_PLUGINS}; do
-        # marketplace is the part after '@' (e.g. pyright-lsp@claude-plugins-official)
-        marketplace="${plugin##*@}"
-        [ "${marketplace}" = "${plugin}" ] && continue   # no '@', nothing to update
-        case " ${seen_marketplaces} " in
-            *" ${marketplace} "*) ;;                     # already refreshed
-            *)
-                seen_marketplaces="${seen_marketplaces} ${marketplace}"
-                echo "Updating Claude Code plugin marketplace: ${marketplace}"
-                su - "${TARGET_USER}" -c "claude plugin marketplace update ${marketplace}" \
-                    || echo "WARNING: could not update marketplace '${marketplace}' (continuing)"
-                ;;
-        esac
+    for repo in ${LSP_MARKETPLACES}; do
+        echo "Adding Claude Code plugin marketplace: ${repo}"
+        su - "${TARGET_USER}" -c "claude plugin marketplace add ${repo} --scope user" \
+            || echo "WARNING: could not add marketplace '${repo}' (continuing)"
     done
     for plugin in ${LSP_PLUGINS}; do
         echo "Installing Claude Code LSP plugin: ${plugin}"
-        su - "${TARGET_USER}" -c "claude plugin install ${plugin}" \
+        su - "${TARGET_USER}" -c "claude plugin install ${plugin} --scope user" \
             || echo "WARNING: could not install plugin '${plugin}' - skipping (install the language-server binary and re-run 'claude plugin install ${plugin}' if you need it)"
     done
 fi

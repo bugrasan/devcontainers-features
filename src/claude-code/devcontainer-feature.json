@@ -2,7 +2,7 @@
     // https://containers.dev/implementors/features/
     "name": "claude-code",
     "id": "claude-code",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "Installs the Claude Code CLI (Anthropic's agentic coding tool) via its native installer, and optionally wires up LSP code-intelligence plugins.",
     "documentationURL": "https://code.claude.com/docs/en/overview",
     "keywords": ["claude", "claude-code", "anthropic", "ai"],
@@ -20,6 +20,11 @@
             "type": "string",
             "default": "pyright-lsp@claude-plugins-official typescript-lsp@claude-plugins-official gopls-lsp@claude-plugins-official",
             "description": "Space-separated Claude Code LSP plugins to install at user scope via 'claude plugin install' (e.g. 'pyright-lsp@claude-plugins-official'). Empty string skips plugin installation. NOTE: each plugin only wires the connection - the matching language-server binary (pyright-langserver, typescript-language-server, gopls, ...) must be installed separately and be on PATH for the plugin to activate. Pairs with the ENABLE_LSP_TOOL=1 containerEnv this Feature sets, which turns on Claude Code's LSP tool."
+        },
+        "lspMarketplaces": {
+            "type": "string",
+            "default": "anthropics/claude-plugins-official",
+            "description": "Space-separated GitHub repos (owner/repo) of Claude Code plugin marketplaces to register (via 'claude plugin marketplace add ... --scope user') before installing lspPlugins. Required because a fresh Claude Code install has no marketplaces registered. Must include the marketplace backing every entry in lspPlugins (e.g. 'anthropics/claude-plugins-official' provides the 'claude-plugins-official' marketplace)."
         },
     },
     // Enable Claude Code's LSP tool (gated behind this env var) so the plugins
