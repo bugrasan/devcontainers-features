@@ -2,7 +2,7 @@
     // https://containers.dev/implementors/features/
     "name": "claude-code",
     "id": "claude-code",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Installs the Claude Code CLI (Anthropic's agentic coding tool) via its native installer, and optionally wires up LSP code-intelligence plugins.",
     "documentationURL": "https://code.claude.com/docs/en/overview",
     "keywords": ["claude", "claude-code", "anthropic", "ai"],

@@ -44,9 +44,29 @@ ln -sf "${TARGET_HOME}/.local/bin/claude" /usr/local/bin/claude
 # must be installed separately and be on PATH for the plugin to activate. A
 # missing binary, an unregistered marketplace, or a transient network error must
 # NOT fail the image build, so each install is guarded with '|| echo WARNING'.
-# The official 'claude-plugins-official' marketplace is auto-available.
+#
+# The 'claude-plugins-official' marketplace is auto-registered, but a fresh
+# Claude Code install ships a stale/empty marketplace index, so 'plugin install'
+# fails with "not found in marketplace ... try 'claude plugin marketplace
+# update'". Refresh each referenced marketplace's index FIRST (dedup'd) so the
+# plugins resolve.
 LSP_PLUGINS="${LSPPLUGINS:-}"
 if [ -n "${LSP_PLUGINS}" ]; then
+    seen_marketplaces=""
+    for plugin in ${LSP_PLUGINS}; do
+        # marketplace is the part after '@' (e.g. pyright-lsp@claude-plugins-official)
+        marketplace="${plugin##*@}"
+        [ "${marketplace}" = "${plugin}" ] && continue   # no '@', nothing to update
+        case " ${seen_marketplaces} " in
+            *" ${marketplace} "*) ;;                     # already refreshed
+            *)
+                seen_marketplaces="${seen_marketplaces} ${marketplace}"
+                echo "Updating Claude Code plugin marketplace: ${marketplace}"
+                su - "${TARGET_USER}" -c "claude plugin marketplace update ${marketplace}" \
+                    || echo "WARNING: could not update marketplace '${marketplace}' (continuing)"
+                ;;
+        esac
+    done
     for plugin in ${LSP_PLUGINS}; do
         echo "Installing Claude Code LSP plugin: ${plugin}"
         su - "${TARGET_USER}" -c "claude plugin install ${plugin}" \
