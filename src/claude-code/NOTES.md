@@ -7,7 +7,6 @@ of text search. The default `lspPlugins` set is:
 
 - `pyright-lsp@claude-plugins-official` (Python)
 - `typescript-lsp@claude-plugins-official` (TypeScript/JavaScript)
-- `gopls-lsp@claude-plugins-official` (Go)
 
 **A plugin only wires the connection.** The matching language-server binary must
 be installed separately and be on `PATH` for the plugin to activate:
@@ -16,7 +15,9 @@ be installed separately and be on `PATH` for the plugin to activate:
 |-----|-----|-----|
 | `pyright-lsp` | `pyright-langserver` | `npm i -g pyright` |
 | `typescript-lsp` | `typescript-language-server` | `npm i -g typescript-language-server` |
-| `gopls-lsp` | `gopls` | Go toolchain + `go install golang.org/x/tools/gopls@latest` |
+
+Add more via `lspPlugins` (e.g. `gopls-lsp@claude-plugins-official` once a Go
+toolchain + `gopls` are on `PATH`).
 
 A fresh Claude Code install has **no marketplaces registered**, so each
 marketplace repo in `lspMarketplaces` (default `anthropics/claude-plugins-official`,
