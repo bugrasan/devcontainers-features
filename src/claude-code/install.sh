@@ -35,4 +35,23 @@ su - "${TARGET_USER}" -c "curl -fsSL https://claude.ai/install.sh | bash -s -- $
 # relying on PATH/containerEnv propagation.
 ln -sf "${TARGET_HOME}/.local/bin/claude" /usr/local/bin/claude
 
+# Install LSP code-intelligence plugins at USER scope (writes the target user's
+# ~/.claude/settings.json) so Claude Code's LSP tool has language servers wired
+# up. Runs as the remote user via a login shell so HOME/PATH resolve correctly.
+#
+# NON-FATAL by design: a plugin only wires the connection to a language server -
+# the server BINARY (pyright-langserver, typescript-language-server, gopls, ...)
+# must be installed separately and be on PATH for the plugin to activate. A
+# missing binary, an unregistered marketplace, or a transient network error must
+# NOT fail the image build, so each install is guarded with '|| echo WARNING'.
+# The official 'claude-plugins-official' marketplace is auto-available.
+LSP_PLUGINS="${LSPPLUGINS:-}"
+if [ -n "${LSP_PLUGINS}" ]; then
+    for plugin in ${LSP_PLUGINS}; do
+        echo "Installing Claude Code LSP plugin: ${plugin}"
+        su - "${TARGET_USER}" -c "claude plugin install ${plugin}" \
+            || echo "WARNING: could not install plugin '${plugin}' - skipping (install the language-server binary and re-run 'claude plugin install ${plugin}' if you need it)"
+    done
+fi
+
 echo 'Done!'

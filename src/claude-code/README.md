@@ -1,7 +1,7 @@
 
 # claude-code (claude-code)
 
-Installs the Claude Code CLI (Anthropic's agentic coding tool) via its native installer.
+Installs the Claude Code CLI (Anthropic's agentic coding tool) via its native installer, and optionally wires up LSP code-intelligence plugins.
 
 ## Example Usage
 
@@ -16,6 +16,7 @@ Installs the Claude Code CLI (Anthropic's agentic coding tool) via its native in
 | Options Id | Description | Type | Default Value |
 |-----|-----|-----|-----|
 | version | Release channel or exact version to install: 'stable', 'latest', or a semver like '1.2.3'. | string | latest |
+| lspPlugins | Space-separated Claude Code LSP plugins to install at user scope via 'claude plugin install'. Empty string skips plugin installation. Each plugin only wires the connection - the matching language-server binary must be installed separately and on PATH. Pairs with the ENABLE_LSP_TOOL=1 containerEnv this Feature sets. | string | pyright-lsp@claude-plugins-official typescript-lsp@claude-plugins-official gopls-lsp@claude-plugins-official |
 
 ## Updates
 

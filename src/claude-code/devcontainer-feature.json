@@ -2,8 +2,8 @@
     // https://containers.dev/implementors/features/
     "name": "claude-code",
     "id": "claude-code",
-    "version": "1.0.1",
-    "description": "Installs the Claude Code CLI (Anthropic's agentic coding tool) via its native installer.",
+    "version": "1.1.0",
+    "description": "Installs the Claude Code CLI (Anthropic's agentic coding tool) via its native installer, and optionally wires up LSP code-intelligence plugins.",
     "documentationURL": "https://code.claude.com/docs/en/overview",
     "keywords": ["claude", "claude-code", "anthropic", "ai"],
     "options": {
@@ -16,6 +16,17 @@
             ],
             "description": "Release channel or exact version to install: 'stable', 'latest', or a semver like '1.2.3'."
         },
+        "lspPlugins": {
+            "type": "string",
+            "default": "pyright-lsp@claude-plugins-official typescript-lsp@claude-plugins-official gopls-lsp@claude-plugins-official",
+            "description": "Space-separated Claude Code LSP plugins to install at user scope via 'claude plugin install' (e.g. 'pyright-lsp@claude-plugins-official'). Empty string skips plugin installation. NOTE: each plugin only wires the connection - the matching language-server binary (pyright-langserver, typescript-language-server, gopls, ...) must be installed separately and be on PATH for the plugin to activate. Pairs with the ENABLE_LSP_TOOL=1 containerEnv this Feature sets, which turns on Claude Code's LSP tool."
+        },
+    },
+    // Enable Claude Code's LSP tool (gated behind this env var) so the plugins
+    // installed above are actually used. Applied to containers built from an
+    // image that bakes in this Feature.
+    "containerEnv": {
+        "ENABLE_LSP_TOOL": "1"
     },
     // No functional dependency (confirmed the installer is a self-contained
     // native binary download with no npm/node dependency - see install.sh),
