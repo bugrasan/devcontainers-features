@@ -1,3 +1,4 @@
+
 # otel-collector-contrib (otel-collector-contrib)
 
 Installs the OpenTelemetry Collector Contrib distribution (includes the azuremonitorexporter) and optionally auto-starts it on container start, so OTLP telemetry (e.g. VS Code / Copilot Chat agent telemetry) can be forwarded to Azure Application Insights.
