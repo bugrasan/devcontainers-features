@@ -4,7 +4,7 @@
         "features": {
             "ghcr.io/devcontainers/features/java": {
                 "version": "latest",
-                "jdkDistro": "open",
+                "jdkDistro": "open"
             },
             "structurizr-cli": {}
         }
@@ -14,7 +14,7 @@
         "features": {
             "ghcr.io/devcontainers/features/java": {
                 "version": "latest",
-                "jdkDistro": "open",
+                "jdkDistro": "open"
             },
             "structurizr-cli": {
                 "version": "2024.02.22"

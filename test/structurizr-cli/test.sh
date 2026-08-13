@@ -32,8 +32,12 @@
 
 set -e
 
-# NOTE: without the 'v' prefix in version
-LATEST_VERSION="2024.03.03"
+# NOTE: this test runs with the Feature's default options, which are
+# "version": "latest" and "jdkInstall": false - so there is no JDK in the image
+# and the CLI cannot actually be executed here. We therefore assert only what
+# the defaults produce: structurizr.sh installed and resolvable on PATH.
+# Running the CLI is covered by the 'latest' and 'past_release' scenarios,
+# which install the java Feature alongside it.
 
 # Optional: Import test library bundled with the devcontainer CLI
 # See https://github.com/devcontainers/cli/blob/HEAD/docs/features/test.md#dev-container-features-test-lib
@@ -43,7 +47,7 @@ source dev-container-features-test-lib
 # Feature-specific tests
 # The 'check' command comes from the dev-container-features-test-lib. Syntax is...
 # check <LABEL> <cmd> [args...]
-check "execute command" bash -c "struzturizr.sh version | grep 'structurizr-cli: ${LATEST_VERSION}'"
+check "structurizr.sh on PATH" bash -c "command -v structurizr.sh"
 
 # Report results
 # If any of the checks above exited with a non-zero exit code, the test will fail.
