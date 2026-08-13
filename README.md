@@ -6,6 +6,7 @@ currently this repo contains the folling devcontainer features:
 - 'claude-code', see [Claude Code](https://code.claude.com/docs/en/overview)
 - 'pi-dev', see [Pi](https://pi.dev)
 - 'speckit', see [GitHub Spec Kit](https://github.com/github/spec-kit)
+- 'otel-collector-contrib', see [OpenTelemetry Collector Contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib)
 
 
 ## structurizr-cli
@@ -35,6 +36,20 @@ Requires Node.js >=22.19.0 and npm - add a Feature that provides them (e.g.
 ```json
 "features": {
     "ghcr.io/bugrasan/devcontainers-features/pi-dev:1": {}
+}
+```
+
+## otel-collector-contrib
+Installs the OpenTelemetry Collector Contrib distribution (`otelcol-contrib`,
+includes the `azuremonitorexporter`) with a default OTLP → Azure Application
+Insights pipeline, auto-started on container start. Set the
+`APPLICATIONINSIGHTS_CONNECTION_STRING` env var (via `remoteEnv`/`containerEnv`)
+and enable VS Code's OTel agent telemetry settings - see the
+[feature README](src/otel-collector-contrib/README.md) for the recommended
+`github.copilot.chat.otel.*` settings and `containerEnv` wiring.
+```json
+"features": {
+    "ghcr.io/bugrasan/devcontainers-features/otel-collector-contrib:1": {}
 }
 ```
 
