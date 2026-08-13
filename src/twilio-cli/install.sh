@@ -26,7 +26,7 @@ ensure_nanolayer nanolayer_location "v0.4.46"
 $nanolayer_location \
 	install \
 	devcontainer-feature \
-	"ghcr.io/devcontainers-contrib/features/apt-packages:1.0.4" \
+	"ghcr.io/devcontainers-extra/features/apt-packages:1.0.4" \
 	--option packages=ca-certificates,wget
 
 # this is basically 1-to-1 from https://www.twilio.com/docs/twilio-cli/quickstart
@@ -40,7 +40,7 @@ echo 'deb https://twilio-cli-prod.s3.amazonaws.com/apt/ /' \
 $nanolayer_location \
 	install \
 	devcontainer-feature \
-	"ghcr.io/devcontainers-contrib/features/apt-packages:1.0.4" \
+	"ghcr.io/devcontainers-extra/features/apt-packages:1.0.4" \
 	--option packages=twilio
 
 

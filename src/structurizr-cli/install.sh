@@ -49,8 +49,8 @@ fi
 $nanolayer_location \
 	install \
 	devcontainer-feature \
-	"ghcr.io/devcontainers-contrib/features/apt-packages:1.0.4" \
-	--option packages=ca-certificates,curl,unzip 
+	"ghcr.io/devcontainers-extra/features/apt-packages:1.0.4" \
+	--option packages=ca-certificates,curl,unzip
 
 if [ "${STRZR_VERSION}" = "latest" ]; then
 	strzr_uri="https://github.com/structurizr/cli/releases/latest/download/${strzr_pkg}"
