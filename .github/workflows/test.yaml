@@ -15,6 +15,7 @@ jobs:
         features:
           - structurizr-cli
           - claude-code
+          - otel-collector-contrib
         baseImage:
           - debian:latest
           - ubuntu:latest

@@ -1,0 +1,49 @@
+{
+    // https://containers.dev/implementors/features/
+    "name": "otel-collector-contrib",
+    "id": "otel-collector-contrib",
+    "version": "1.0.0",
+    "description": "Installs the OpenTelemetry Collector Contrib distribution (includes the azuremonitorexporter) and optionally auto-starts it on container start, so OTLP telemetry (e.g. VS Code / Copilot Chat agent telemetry) can be forwarded to Azure Application Insights.",
+    "documentationURL": "https://github.com/open-telemetry/opentelemetry-collector-contrib",
+    "keywords": ["opentelemetry", "otel", "collector", "azuremonitor", "application-insights", "telemetry"],
+    "options": {
+        "version": {
+            "type": "string",
+            "default": "latest",
+            "proposals": [
+                "latest",
+                "0.158.0",
+            ],
+            "description": "Version of the otelcol-contrib release to install: 'latest' or an exact version like '0.158.0' (see https://github.com/open-telemetry/opentelemetry-collector-releases/releases)."
+        },
+        "autoStart": {
+            "type": "boolean",
+            "default": true,
+            "description": "Start the collector in the background on every container start (via a Feature-contributed postStartCommand, run as the remote user). Startup is skipped with a warning when APPLICATIONINSIGHTS_CONNECTION_STRING is not set and the default config is in use. Set to false to only install the binary."
+        },
+        "grpcPort": {
+            "type": "string",
+            "default": "4317",
+            "description": "Port the OTLP gRPC receiver listens on (localhost only) in the generated default config. Ignored when configPath is set."
+        },
+        "httpPort": {
+            "type": "string",
+            "default": "4318",
+            "description": "Port the OTLP HTTP receiver listens on (localhost only) in the generated default config. Ignored when configPath is set."
+        },
+        "configPath": {
+            "type": "string",
+            "default": "",
+            "description": "Absolute path (inside the container) to a custom collector config file to use instead of the generated default at /etc/otelcol-contrib/config.yaml. The file only needs to exist at container runtime (e.g. a workspace-mounted path), not at build time."
+        },
+    },
+    // Runs on every container start, as the remote user, with remoteEnv
+    // applied - so APPLICATIONINSIGHTS_CONNECTION_STRING can be supplied via
+    // either containerEnv or remoteEnv in the consuming devcontainer.json.
+    // The script exits immediately when autoStart=false (baked in at install
+    // time) or when the collector is already running.
+    "postStartCommand": "/usr/local/share/otel-collector-contrib/start.sh",
+    "installsAfter": [
+        "ghcr.io/devcontainers/features/common-utils",
+    ],
+}
