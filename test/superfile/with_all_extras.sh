@@ -21,6 +21,9 @@ CONFIG="${HOME}/.config/superfile/config.toml"
 
 check "spf is on PATH" bash -c "command -v spf"
 
+# createAlias: true (the Feature defaults it to false)
+check "superfile alias installed" bash -c "test -L /usr/local/bin/superfile && superfile --version"
+
 # installPreviewTools. Note 'bat' is packaged as 'batcat' on Debian/Ubuntu -
 # superfile calls 'bat', so the Feature has to bridge the two names.
 check "ffmpeg installed" bash -c "command -v ffmpeg"
@@ -41,8 +44,8 @@ check "metadata plugin enabled" bash -c "grep -qx 'metadata = true' '${CONFIG}'"
 check "bat wired as code previewer" bash -c "grep -qx 'code_previewer = \"bat\"' '${CONFIG}'"
 check "zoxide support enabled" bash -c "grep -qx 'zoxide_support = true' '${CONFIG}'"
 
-# nerdfont: false
-check "nerdfont disabled" bash -c "grep -qx 'nerdfont = false' '${CONFIG}'"
+# nerdfont: true (the Feature defaults it to false)
+check "nerdfont enabled" bash -c "grep -qx 'nerdfont = true' '${CONFIG}'"
 
 # cdOnQuit: true - config flag plus the shell wrapper.
 check "cd_on_quit enabled in config" bash -c "grep -qx 'cd_on_quit = true' '${CONFIG}'"

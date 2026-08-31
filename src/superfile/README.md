@@ -19,13 +19,13 @@ Installs superfile ('spf'), a modern terminal file manager (TUI), from its offic
 | installClipboardTools | Install xdg-utils (xdg-open, for 'open with the default application'), xclip and wl-clipboard. These are mostly no-ops in a headless container but are small and stop superfile's --debug-info from reporting them as missing. | boolean | false |
 | installZoxide | Install zoxide for smart directory jumping inside superfile. When 'configureDefaults' is on, this also sets 'zoxide_support = true' in the generated config. | boolean | false |
 | configureDefaults | Write a small container-friendly ~/.config/superfile/config.toml for the remote user (only when no config file exists yet). Its most important effect is 'auto_check_update = false', so a throwaway dev container never phones home to the GitHub API on startup. Set to false to leave configuration entirely to superfile's own first-run defaults. | boolean | true |
-| nerdfont | Value for superfile's 'nerdfont' setting in the generated config (ignored when configureDefaults is false). superfile renders Nerd Font glyphs by default; terminal fonts live on the HOST, so set this to false when the terminal attaching to the container does not use a Nerd Font-patched font, to avoid tofu boxes. | boolean | true |
+| nerdfont | Value for superfile's 'nerdfont' setting in the generated config (ignored when configureDefaults is false). superfile itself defaults this to true, but the terminal font lives on the HOST, not in the container, so a terminal without a Nerd Font-patched font renders superfile's icons as tofu boxes. This Feature therefore defaults to the safe value; set it to true when your terminal does use a patched font and you want the icons. | boolean | false |
 | cdOnQuit | Enable superfile's 'cd on quit': sets 'cd_on_quit = true' in the generated config (requires configureDefaults) and installs upstream's spf() shell wrapper into the remote user's ~/.bashrc / ~/.zshrc, so leaving superfile changes the shell's directory. Off by default because the wrapper shadows the 'spf' command and edits the user's shell rc files. | boolean | false |
-| createAlias | Also expose the binary as 'superfile' (a symlink to /usr/local/bin/spf). Upstream installs the command as 'spf' only; the symlink makes the more discoverable name work too. Set to false to install exactly what upstream does. | boolean | true |
+| createAlias | Also expose the binary as 'superfile' (a symlink to /usr/local/bin/spf). Off by default so the Feature installs exactly what upstream does, and nothing else lands on PATH under a name superfile does not own. Set to true if you would rather type the long name. | boolean | false |
 
 ## How it works
 
-- Downloads the official [superfile](https://github.com/yorukot/superfile) release asset (`superfile-linux-v<version>-<arch>.tar.gz`, linux `amd64`/`arm64`) and installs the binary as `/usr/local/bin/spf` — the command name upstream uses. With `createAlias` (default `true`) a `superfile` symlink is added next to it, so both names work.
+- Downloads the official [superfile](https://github.com/yorukot/superfile) release asset (`superfile-linux-v<version>-<arch>.tar.gz`, linux `amd64`/`arm64`) and installs the binary as `/usr/local/bin/spf` — the command name upstream uses, and the only thing that lands on `PATH` by default. Set `createAlias: true` to add a `superfile` symlink next to it so both names work.
 - `version: latest` (the default) is resolved at **build time** by following the `releases/latest` redirect, with the GitHub API as a fallback. Pin an exact release (`"1.6.0"`, or `"v1.6.0"`) for reproducible builds.
 - No language runtime is needed: the release binary is a statically linked (`CGO_ENABLED=0`) Go binary.
 
@@ -51,15 +51,17 @@ superfile still generates its own `hotkeys.toml` and `theme/` on first run, alon
 
 ## Nerd Font glyphs
 
-superfile ships `nerdfont = true`, meaning it renders Nerd Font icons. The terminal font lives on the **host**, not in the container, so a terminal without a Nerd Font-patched font shows tofu boxes (`□`). Set `nerdfont: false` in that case:
+superfile itself ships `nerdfont = true`, meaning it renders Nerd Font icons. The terminal font lives on the **host**, not in the container, so a terminal without a Nerd Font-patched font shows tofu boxes (`□`) — and a Feature cannot know what the host is running. This Feature therefore defaults `nerdfont` to `false`, which renders correctly everywhere. Turn the icons on when your terminal does use a patched font:
 
 ```jsonc
 "features": {
     "ghcr.io/bugrasan/devcontainers-features/superfile:1": {
-        "nerdfont": false
+        "nerdfont": true
     }
 }
 ```
+
+This only applies to the generated config, so it does nothing when `configureDefaults` is `false`.
 
 ## cd on quit
 

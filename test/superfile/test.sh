@@ -29,8 +29,8 @@ CONFIG="${HOME}/.config/superfile/config.toml"
 check "spf is on PATH" bash -c "command -v spf"
 check "spf --version" bash -c "spf --version"
 
-# Upstream only installs 'spf'; createAlias (default true) adds the longer name.
-check "superfile alias installed" bash -c "test -L /usr/local/bin/superfile && superfile --version"
+# createAlias is off by default, so only upstream's command name exists.
+check "no superfile alias by default" bash -c "! test -e /usr/local/bin/superfile"
 
 # Both of these exercise the real binary without needing a TTY (the TUI itself
 # cannot start in a test harness).
@@ -46,7 +46,7 @@ check "auto update check disabled" bash -c "grep -qx 'auto_check_update = false'
 # prints a 'missing fields' warning on every start.
 check "missing-field warning suppressed" bash -c "grep -qx 'ignore_missing_fields = true' '${CONFIG}'"
 
-check "nerdfont on by default" bash -c "grep -qx 'nerdfont = true' '${CONFIG}'"
+check "nerdfont off by default" bash -c "grep -qx 'nerdfont = false' '${CONFIG}'"
 check "cd_on_quit off by default" bash -c "grep -qx 'cd_on_quit = false' '${CONFIG}'"
 
 # Plugin toggles must stay off while their binaries are not installed.

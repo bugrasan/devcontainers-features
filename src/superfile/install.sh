@@ -9,9 +9,9 @@ INSTALL_PREVIEW_TOOLS="${INSTALLPREVIEWTOOLS:-"false"}"
 INSTALL_CLIPBOARD_TOOLS="${INSTALLCLIPBOARDTOOLS:-"false"}"
 INSTALL_ZOXIDE="${INSTALLZOXIDE:-"false"}"
 CONFIGURE_DEFAULTS="${CONFIGUREDEFAULTS:-"true"}"
-NERDFONT="${NERDFONT:-"true"}"
+NERDFONT="${NERDFONT:-"false"}"
 CD_ON_QUIT="${CDONQUIT:-"false"}"
-CREATE_ALIAS="${CREATEALIAS:-"true"}"
+CREATE_ALIAS="${CREATEALIAS:-"false"}"
 
 # The 'install.sh' entrypoint script is always executed as the root user.
 # For more details, see https://containers.dev/implementors/features#user-env-var
@@ -108,8 +108,8 @@ fi
 
 install -m 0755 "${SPF_BIN}" "${INSTALL_DIR}/spf"
 
-# Upstream only ever installs the command as 'spf'; 'superfile' is the name
-# people look for, so expose both by default.
+# Upstream only ever installs the command as 'spf'. Opt in via createAlias to
+# also get the longer, more discoverable name.
 if [ "${CREATE_ALIAS}" = "true" ]; then
     ln -sf "${INSTALL_DIR}/spf" "${INSTALL_DIR}/superfile"
 elif [ -L "${INSTALL_DIR}/superfile" ] && [ "$(readlink "${INSTALL_DIR}/superfile")" = "${INSTALL_DIR}/spf" ]; then

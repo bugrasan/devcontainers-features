@@ -67,12 +67,13 @@ this one (both are already provided by the `devcontainer-base-ai` image).
 ## superfile
 Installs [superfile](https://github.com/yorukot/superfile), a modern terminal
 file manager, from its official GitHub release. The binary is installed under
-upstream's command name `spf`, with a `superfile` symlink alongside it. By
-default it also writes a container-friendly `~/.config/superfile/config.toml`
-for the remote user, whose main job is turning off superfile's 24h auto-update
-check so a disposable container never phones home - see the
-[feature README](src/superfile/README.md) for the optional preview/clipboard/
-zoxide tools, Nerd Font handling and `cd_on_quit` support.
+upstream's command name `spf` (add a `superfile` symlink with
+`createAlias`). By default it also writes a container-friendly
+`~/.config/superfile/config.toml` for the remote user, whose main job is
+turning off superfile's 24h auto-update check so a disposable container never
+phones home; that config also defaults `nerdfont` to false, since the terminal
+font lives on the host - see the [feature README](src/superfile/README.md) for
+that, the optional preview/clipboard/zoxide tools and `cd_on_quit` support.
 ```json
 "features": {
     "ghcr.io/bugrasan/devcontainers-features/superfile:1": {}

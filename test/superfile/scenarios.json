@@ -7,7 +7,8 @@
                 "installClipboardTools": true,
                 "installZoxide": true,
                 "cdOnQuit": true,
-                "nerdfont": false
+                "nerdfont": true,
+                "createAlias": true
             }
         }
     },
@@ -16,8 +17,7 @@
         "features": {
             "superfile": {
                 "version": "1.6.0",
-                "configureDefaults": false,
-                "createAlias": false
+                "configureDefaults": false
             }
         }
     }
