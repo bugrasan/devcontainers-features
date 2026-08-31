@@ -1,0 +1,69 @@
+{
+    // https://containers.dev/implementors/features/
+    "name": "superfile",
+    "id": "superfile",
+    "version": "1.0.0",
+    "description": "Installs superfile ('spf'), a modern terminal file manager (TUI), from its official GitHub release. Optionally installs the tools superfile shells out to for previews/clipboard/zoxide, and seeds a container-friendly config for the remote user.",
+    "documentationURL": "https://github.com/yorukot/superfile",
+    "keywords": ["superfile", "spf", "file-manager", "tui", "terminal", "cli"],
+    "options": {
+        "version": {
+            "type": "string",
+            "default": "latest",
+            "proposals": [
+                "latest",
+                "1.6.0",
+            ],
+            "description": "superfile release to install: 'latest' (resolved at build time) or an exact version like '1.6.0' (a leading 'v' is accepted too). See https://github.com/yorukot/superfile/releases."
+        },
+        "installPreviewTools": {
+            "type": "boolean",
+            "default": false,
+            "description": "Install the tools superfile uses for rich previews: ffmpeg (video thumbnails), poppler-utils (PDF thumbnails via pdftoppm), exiftool (the 'metadata' plugin) and bat (syntax-highlighted code preview). Adds a few hundred MB to the image. When 'configureDefaults' is on, this also turns on 'metadata' and sets 'code_previewer = \"bat\"' in the generated config."
+        },
+        "installClipboardTools": {
+            "type": "boolean",
+            "default": false,
+            "description": "Install xdg-utils (xdg-open, for 'open with the default application'), xclip and wl-clipboard. These are mostly no-ops in a headless container but are small and stop superfile's --debug-info from reporting them as missing."
+        },
+        "installZoxide": {
+            "type": "boolean",
+            "default": false,
+            "description": "Install zoxide for smart directory jumping inside superfile. When 'configureDefaults' is on, this also sets 'zoxide_support = true' in the generated config."
+        },
+        "configureDefaults": {
+            "type": "boolean",
+            "default": true,
+            "description": "Write a small container-friendly ~/.config/superfile/config.toml for the remote user (only when no config file exists yet). Its most important effect is 'auto_check_update = false', so a throwaway dev container never phones home to the GitHub API on startup. Set to false to leave configuration entirely to superfile's own first-run defaults."
+        },
+        "nerdfont": {
+            "type": "boolean",
+            "default": true,
+            "description": "Value for superfile's 'nerdfont' setting in the generated config (ignored when configureDefaults is false). superfile renders Nerd Font glyphs by default; terminal fonts live on the HOST, so set this to false when the terminal attaching to the container does not use a Nerd Font-patched font, to avoid tofu boxes."
+        },
+        "cdOnQuit": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable superfile's 'cd on quit': sets 'cd_on_quit = true' in the generated config (requires configureDefaults) and installs upstream's spf() shell wrapper into the remote user's ~/.bashrc / ~/.zshrc, so leaving superfile changes the shell's directory. Off by default because the wrapper shadows the 'spf' command and edits the user's shell rc files."
+        },
+        "createAlias": {
+            "type": "boolean",
+            "default": true,
+            "description": "Also expose the binary as 'superfile' (a symlink to /usr/local/bin/spf). Upstream installs the command as 'spf' only; the symlink makes the more discoverable name work too. Set to false to install exactly what upstream does."
+        },
+    },
+    // No functional dependency - the release asset is a statically linked
+    // (CGO_ENABLED=0) Go binary, and the optional tools above come from apt.
+    // installsAfter is used purely for build-cache ordering: this Feature
+    // tracks the 'latest' release channel by default and changes more often
+    // than the Features below. Docker's cache key chains sequentially, so
+    // installing last keeps the stable prefix cache-hit even when superfile
+    // gets a new release.
+    "installsAfter": [
+        "ghcr.io/devcontainers/features/common-utils",
+        "ghcr.io/devcontainers/features/github-cli",
+        "ghcr.io/devcontainers/features/node",
+        "ghcr.io/devcontainers/features/python",
+        "ghcr.io/devcontainers/features/sshd",
+    ],
+}

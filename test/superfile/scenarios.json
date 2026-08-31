@@ -1,0 +1,24 @@
+{
+    "with_all_extras": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "superfile": {
+                "installPreviewTools": true,
+                "installClipboardTools": true,
+                "installZoxide": true,
+                "cdOnQuit": true,
+                "nerdfont": false
+            }
+        }
+    },
+    "pinned_without_config": {
+        "image": "debian:latest",
+        "features": {
+            "superfile": {
+                "version": "1.6.0",
+                "configureDefaults": false,
+                "createAlias": false
+            }
+        }
+    }
+}
