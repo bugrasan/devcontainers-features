@@ -2,7 +2,7 @@
     // https://containers.dev/implementors/features/
     "name": "superfile",
     "id": "superfile",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Installs superfile ('spf'), a modern terminal file manager (TUI), from its official GitHub release. Optionally installs the tools superfile shells out to for previews/clipboard/zoxide, and seeds a container-friendly config for the remote user.",
     "documentationURL": "https://github.com/yorukot/superfile",
     "keywords": ["superfile", "spf", "file-manager", "tui", "terminal", "cli"],
@@ -38,8 +38,8 @@
         },
         "nerdfont": {
             "type": "boolean",
-            "default": true,
-            "description": "Value for superfile's 'nerdfont' setting in the generated config (ignored when configureDefaults is false). superfile renders Nerd Font glyphs by default; terminal fonts live on the HOST, so set this to false when the terminal attaching to the container does not use a Nerd Font-patched font, to avoid tofu boxes."
+            "default": false,
+            "description": "Value for superfile's 'nerdfont' setting in the generated config (ignored when configureDefaults is false). superfile itself defaults this to true, but the terminal font lives on the HOST, not in the container, so a terminal without a Nerd Font-patched font renders superfile's icons as tofu boxes. This Feature therefore defaults to the safe value; set it to true when your terminal does use a patched font and you want the icons."
         },
         "cdOnQuit": {
             "type": "boolean",
@@ -48,8 +48,8 @@
         },
         "createAlias": {
             "type": "boolean",
-            "default": true,
-            "description": "Also expose the binary as 'superfile' (a symlink to /usr/local/bin/spf). Upstream installs the command as 'spf' only; the symlink makes the more discoverable name work too. Set to false to install exactly what upstream does."
+            "default": false,
+            "description": "Also expose the binary as 'superfile' (a symlink to /usr/local/bin/spf). Off by default so the Feature installs exactly what upstream does, and nothing else lands on PATH under a name superfile does not own. Set to true if you would rather type the long name."
         },
     },
     // No functional dependency - the release asset is a statically linked

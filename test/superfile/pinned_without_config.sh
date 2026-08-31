@@ -1,9 +1,8 @@
 #!/bin/bash
 
 # This test file is executed against the 'pinned_without_config' scenario in
-# scenarios.json: an exact version, no generated config and no 'superfile'
-# alias - i.e. the Feature installing exactly what upstream installs, on a bare
-# debian image that ships neither curl nor ca-certificates.
+# scenarios.json: an exact version and no generated config, on a bare debian
+# image that ships neither curl nor ca-certificates.
 #
 # For more information, see: https://github.com/devcontainers/cli/blob/main/docs/features/test.md
 #
@@ -22,7 +21,7 @@ check "spf is on PATH" bash -c "command -v spf"
 # The pinned version must be the one that actually got installed.
 check "pinned version installed" bash -c "spf --version | grep -q 'v1.6.0'"
 
-# createAlias: false -> upstream's command name only.
+# createAlias defaults to false -> upstream's command name only.
 check "no superfile alias" bash -c "! test -e /usr/local/bin/superfile"
 
 # configureDefaults: false -> the Feature must not write into the user's home.

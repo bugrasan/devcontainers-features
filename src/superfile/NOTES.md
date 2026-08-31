@@ -1,6 +1,6 @@
 ## How it works
 
-- Downloads the official [superfile](https://github.com/yorukot/superfile) release asset (`superfile-linux-v<version>-<arch>.tar.gz`, linux `amd64`/`arm64`) and installs the binary as `/usr/local/bin/spf` — the command name upstream uses. With `createAlias` (default `true`) a `superfile` symlink is added next to it, so both names work.
+- Downloads the official [superfile](https://github.com/yorukot/superfile) release asset (`superfile-linux-v<version>-<arch>.tar.gz`, linux `amd64`/`arm64`) and installs the binary as `/usr/local/bin/spf` — the command name upstream uses, and the only thing that lands on `PATH` by default. Set `createAlias: true` to add a `superfile` symlink next to it so both names work.
 - `version: latest` (the default) is resolved at **build time** by following the `releases/latest` redirect, with the GitHub API as a fallback. Pin an exact release (`"1.6.0"`, or `"v1.6.0"`) for reproducible builds.
 - No language runtime is needed: the release binary is a statically linked (`CGO_ENABLED=0`) Go binary.
 
@@ -26,15 +26,17 @@ superfile still generates its own `hotkeys.toml` and `theme/` on first run, alon
 
 ## Nerd Font glyphs
 
-superfile ships `nerdfont = true`, meaning it renders Nerd Font icons. The terminal font lives on the **host**, not in the container, so a terminal without a Nerd Font-patched font shows tofu boxes (`□`). Set `nerdfont: false` in that case:
+superfile itself ships `nerdfont = true`, meaning it renders Nerd Font icons. The terminal font lives on the **host**, not in the container, so a terminal without a Nerd Font-patched font shows tofu boxes (`□`) — and a Feature cannot know what the host is running. This Feature therefore defaults `nerdfont` to `false`, which renders correctly everywhere. Turn the icons on when your terminal does use a patched font:
 
 ```jsonc
 "features": {
     "ghcr.io/bugrasan/devcontainers-features/superfile:1": {
-        "nerdfont": false
+        "nerdfont": true
     }
 }
 ```
+
+This only applies to the generated config, so it does nothing when `configureDefaults` is `false`.
 
 ## cd on quit
 
