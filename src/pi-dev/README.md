@@ -11,10 +11,7 @@ Installs the Pi coding agent CLI via the official pi.dev installer. Requires Nod
 }
 ```
 
-## Options
 
-| Options Id | Description | Type | Default Value |
-|-----|-----|-----|-----|
 
 
 
