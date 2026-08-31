@@ -7,6 +7,7 @@ currently this repo contains the folling devcontainer features:
 - 'pi-dev', see [Pi](https://pi.dev)
 - 'speckit', see [GitHub Spec Kit](https://github.com/github/spec-kit)
 - 'otel-collector-contrib', see [OpenTelemetry Collector Contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib)
+- 'superfile', see [superfile](https://github.com/yorukot/superfile)
 
 
 ## structurizr-cli
@@ -60,5 +61,20 @@ this one (both are already provided by the `devcontainer-base-ai` image).
 ```json
 "features": {
     "ghcr.io/bugrasan/devcontainers-features/speckit:1": {}
+}
+```
+
+## superfile
+Installs [superfile](https://github.com/yorukot/superfile), a modern terminal
+file manager, from its official GitHub release. The binary is installed under
+upstream's command name `spf`, with a `superfile` symlink alongside it. By
+default it also writes a container-friendly `~/.config/superfile/config.toml`
+for the remote user, whose main job is turning off superfile's 24h auto-update
+check so a disposable container never phones home - see the
+[feature README](src/superfile/README.md) for the optional preview/clipboard/
+zoxide tools, Nerd Font handling and `cd_on_quit` support.
+```json
+"features": {
+    "ghcr.io/bugrasan/devcontainers-features/superfile:1": {}
 }
 ```
