@@ -2,7 +2,7 @@
     // https://containers.dev/implementors/features/
     "name": "superfile",
     "id": "superfile",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Installs superfile ('spf'), a modern terminal file manager (TUI), from its official GitHub release. Optionally installs the tools superfile shells out to for previews/clipboard/zoxide, and seeds a container-friendly config for the remote user.",
     "documentationURL": "https://github.com/yorukot/superfile",
     "keywords": ["superfile", "spf", "file-manager", "tui", "terminal", "cli"],
@@ -19,7 +19,7 @@
         "installPreviewTools": {
             "type": "boolean",
             "default": false,
-            "description": "Install the tools superfile uses for rich previews: ffmpeg (video thumbnails), poppler-utils (PDF thumbnails via pdftoppm), exiftool (the 'metadata' plugin) and bat (syntax-highlighted code preview). Adds a few hundred MB to the image. When 'configureDefaults' is on, this also turns on 'metadata' and sets 'code_previewer = \"bat\"' in the generated config."
+            "description": "Install the tools superfile uses for rich previews: ffmpeg (video thumbnails), poppler-utils (PDF thumbnails via pdftoppm), exiftool (the 'metadata' plugin) and bat (syntax-highlighted code preview). Adds a few hundred MB to the image. Leave this off when your base image already provides the tools - the 'metadata' and 'codePreviewer' options below default to detecting them on PATH regardless of who installed them."
         },
         "installClipboardTools": {
             "type": "boolean",
@@ -29,7 +29,52 @@
         "installZoxide": {
             "type": "boolean",
             "default": false,
-            "description": "Install zoxide for smart directory jumping inside superfile. When 'configureDefaults' is on, this also sets 'zoxide_support = true' in the generated config."
+            "description": "Install zoxide for smart directory jumping inside superfile. Leave off when your base image already provides zoxide - the 'zoxideSupport' option below defaults to detecting it on PATH regardless of who installed it."
+        },
+        "metadata": {
+            "type": "string",
+            "default": "auto",
+            "proposals": [
+                "auto",
+                "true",
+                "false",
+            ],
+            "enum": [
+                "auto",
+                "true",
+                "false",
+            ],
+            "description": "superfile's detailed-metadata plugin, which requires exiftool. 'auto' (default) enables it when exiftool is on PATH at install time - no matter who installed it - so a base image that apt-installs exiftool in its own Dockerfile gets the plugin without this Feature also pulling in a preview toolchain it already has. 'true' forces it on (warns if exiftool is missing); 'false' forces it off. Ignored when configureDefaults is false."
+        },
+        "codePreviewer": {
+            "type": "string",
+            "default": "auto",
+            "proposals": [
+                "auto",
+                "bat",
+                "builtin",
+            ],
+            "enum": [
+                "auto",
+                "bat",
+                "builtin",
+            ],
+            "description": "Which syntax highlighter superfile previews code with. 'auto' (default) uses bat when it is on PATH at install time, whoever installed it, and otherwise falls back to superfile's builtin chroma highlighter. 'bat' forces bat (warns if missing); 'builtin' forces chroma. Ignored when configureDefaults is false."
+        },
+        "zoxideSupport": {
+            "type": "string",
+            "default": "auto",
+            "proposals": [
+                "auto",
+                "true",
+                "false",
+            ],
+            "enum": [
+                "auto",
+                "true",
+                "false",
+            ],
+            "description": "superfile's zoxide integration for smart directory jumping. 'auto' (default) enables it when zoxide is on PATH at install time, whoever installed it. 'true' forces it on (warns if zoxide is missing); 'false' forces it off. Ignored when configureDefaults is false."
         },
         "configureDefaults": {
             "type": "boolean",

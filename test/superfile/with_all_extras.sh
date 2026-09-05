@@ -39,7 +39,8 @@ check "wl-copy installed" bash -c "command -v wl-copy"
 # installZoxide
 check "zoxide installed" bash -c "command -v zoxide"
 
-# Plugin toggles must follow the tools that were actually installed.
+# Plugin toggles default to 'auto' and follow what is on PATH - here the
+# tools this Feature just installed, so all three resolve on.
 check "metadata plugin enabled" bash -c "grep -qx 'metadata = true' '${CONFIG}'"
 check "bat wired as code previewer" bash -c "grep -qx 'code_previewer = \"bat\"' '${CONFIG}'"
 check "zoxide support enabled" bash -c "grep -qx 'zoxide_support = true' '${CONFIG}'"

@@ -12,6 +12,24 @@
             }
         }
     },
+    "tools_from_dockerfile": {
+        "build": {
+            "dockerfile": "Dockerfile"
+        },
+        "features": {
+            "superfile": {}
+        }
+    },
+    "explicit_toggles": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "superfile": {
+                "metadata": "true",
+                "codePreviewer": "bat",
+                "zoxideSupport": "true"
+            }
+        }
+    },
     "pinned_without_config": {
         "image": "debian:latest",
         "features": {

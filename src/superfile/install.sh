@@ -12,6 +12,9 @@ CONFIGURE_DEFAULTS="${CONFIGUREDEFAULTS:-"true"}"
 NERDFONT="${NERDFONT:-"false"}"
 CD_ON_QUIT="${CDONQUIT:-"false"}"
 CREATE_ALIAS="${CREATEALIAS:-"false"}"
+METADATA="${METADATA:-"auto"}"
+CODE_PREVIEWER="${CODEPREVIEWER:-"auto"}"
+ZOXIDE_SUPPORT="${ZOXIDESUPPORT:-"auto"}"
 
 # The 'install.sh' entrypoint script is always executed as the root user.
 # For more details, see https://containers.dev/implementors/features#user-env-var
@@ -25,6 +28,21 @@ RC_MARKER="# >>> superfile devcontainer feature (cd_on_quit) >>>"
 RC_MARKER_END="# <<< superfile devcontainer feature (cd_on_quit) <<<"
 
 APT_UPDATED="false"
+
+# Fail fast on a bad tri-state value rather than silently treating it as off.
+case "${METADATA}" in auto | true | false) ;; *)
+    echo "ERROR: metadata must be 'auto', 'true' or 'false' (got '${METADATA}')."; exit 1 ;;
+esac
+case "${CODE_PREVIEWER}" in auto | bat | builtin) ;; *)
+    echo "ERROR: codePreviewer must be 'auto', 'bat' or 'builtin' (got '${CODE_PREVIEWER}')."; exit 1 ;;
+esac
+case "${ZOXIDE_SUPPORT}" in auto | true | false) ;; *)
+    echo "ERROR: zoxideSupport must be 'auto', 'true' or 'false' (got '${ZOXIDE_SUPPORT}')."; exit 1 ;;
+esac
+
+have() {
+    command -v "$1" >/dev/null 2>&1
+}
 
 # Install packages via apt, running 'apt-get update' at most once. Package
 # lists are cleaned up at the end of the script, but only if we touched apt.
@@ -124,11 +142,16 @@ if [ "${INSTALL_PREVIEW_TOOLS}" = "true" ]; then
     echo "Installing preview tools (ffmpeg, poppler-utils, exiftool, bat)..."
     # exiftool ships as libimage-exiftool-perl on Debian/Ubuntu.
     apt_install ffmpeg poppler-utils libimage-exiftool-perl bat
-    # On Debian/Ubuntu the bat package installs the binary as 'batcat' (the
-    # 'bat' name is taken by bacula-console-qt), but superfile invokes 'bat'.
-    if ! command -v bat >/dev/null 2>&1 && command -v batcat >/dev/null 2>&1; then
-        ln -sf "$(command -v batcat)" "${INSTALL_DIR}/bat"
-    fi
+fi
+
+# On Debian/Ubuntu the bat package installs the binary as 'batcat' (the 'bat'
+# name belongs to bacula-console-qt), but superfile invokes 'bat'. Bridge the
+# names whenever batcat is present - not only when this Feature installed it -
+# so an image that apt-installed bat in its own Dockerfile also works, and so
+# the codePreviewer detection below sees it.
+if ! have bat && have batcat; then
+    ln -sf "$(command -v batcat)" "${INSTALL_DIR}/bat"
+    echo "Linked ${INSTALL_DIR}/bat -> $(command -v batcat)."
 fi
 
 if [ "${INSTALL_CLIPBOARD_TOOLS}" = "true" ]; then
@@ -160,19 +183,45 @@ if [ "${CONFIGURE_DEFAULTS}" = "true" ]; then
     if [ -e "${CONFIG_FILE}" ]; then
         echo "Leaving the existing ${CONFIG_FILE} untouched."
     else
-        # Plugin toggles are only switched on when this Feature actually
-        # installed the tool they require, so the config never references a
-        # binary that isn't there.
-        CFG_METADATA="false"
-        CFG_CODE_PREVIEWER='""'
-        CFG_ZOXIDE="false"
-        if [ "${INSTALL_PREVIEW_TOOLS}" = "true" ]; then
-            CFG_METADATA="true"
-            CFG_CODE_PREVIEWER='"bat"'
+        # Plugin toggles are resolved from what is actually on PATH, not from
+        # whether THIS Feature did the installing. That matters for images
+        # which provide the tools themselves (a Dockerfile apt-installing
+        # exiftool, say): previously the plugin stayed off unless you also set
+        # installPreviewTools, which would re-install a toolchain the image
+        # already had. Feature install.sh runs after the image's own Dockerfile,
+        # so anything it installed is visible here.
+        if [ "${METADATA}" = "auto" ]; then
+            have exiftool && CFG_METADATA="true" || CFG_METADATA="false"
+        else
+            CFG_METADATA="${METADATA}"
+            if [ "${CFG_METADATA}" = "true" ] && ! have exiftool; then
+                echo "WARNING: metadata=true but exiftool is not on PATH - superfile's metadata plugin will not work until it is."
+            fi
         fi
-        if [ "${INSTALL_ZOXIDE}" = "true" ]; then
-            CFG_ZOXIDE="true"
+
+        case "${CODE_PREVIEWER}" in
+            auto)
+                have bat && CFG_CODE_PREVIEWER='"bat"' || CFG_CODE_PREVIEWER='""'
+                ;;
+            bat)
+                CFG_CODE_PREVIEWER='"bat"'
+                have bat || echo "WARNING: codePreviewer=bat but bat is not on PATH - superfile will fail to preview code until it is."
+                ;;
+            builtin)
+                CFG_CODE_PREVIEWER='""'
+                ;;
+        esac
+
+        if [ "${ZOXIDE_SUPPORT}" = "auto" ]; then
+            have zoxide && CFG_ZOXIDE="true" || CFG_ZOXIDE="false"
+        else
+            CFG_ZOXIDE="${ZOXIDE_SUPPORT}"
+            if [ "${CFG_ZOXIDE}" = "true" ] && ! have zoxide; then
+                echo "WARNING: zoxideSupport=true but zoxide is not on PATH - superfile's zoxide integration will not work until it is."
+            fi
         fi
+
+        echo "Plugin toggles: metadata=${CFG_METADATA}, code_previewer=${CFG_CODE_PREVIEWER}, zoxide_support=${CFG_ZOXIDE}"
 
         mkdir -p "${CONFIG_DIR}"
         # superfile merges this file over its own built-in defaults, so it
@@ -214,14 +263,17 @@ cd_on_quit = ${CD_ON_QUIT}
 #                                   Plugins                                   #
 ###############################################################################
 
-#-- Detailed metadata. Requires exiftool (Feature option 'installPreviewTools').
+#-- Detailed metadata. Requires exiftool; set by the Feature's 'metadata'
+#-- option, which defaults to detecting exiftool on PATH.
 metadata = ${CFG_METADATA}
 
 #-- Syntax-highlighted preview via bat, "" for the builtin chroma highlighter.
-#-- Requires bat (Feature option 'installPreviewTools').
+#-- Requires bat; set by the Feature's 'codePreviewer' option, which defaults
+#-- to detecting bat on PATH.
 code_previewer = ${CFG_CODE_PREVIEWER}
 
-#-- Smart directory jumping. Requires zoxide (Feature option 'installZoxide').
+#-- Smart directory jumping. Requires zoxide; set by the Feature's
+#-- 'zoxideSupport' option, which defaults to detecting zoxide on PATH.
 zoxide_support = ${CFG_ZOXIDE}
 EOF
         chmod 0644 "${CONFIG_FILE}"
