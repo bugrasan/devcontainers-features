@@ -34,11 +34,6 @@
         "metadata": {
             "type": "string",
             "default": "auto",
-            "proposals": [
-                "auto",
-                "true",
-                "false",
-            ],
             "enum": [
                 "auto",
                 "true",
@@ -49,11 +44,6 @@
         "codePreviewer": {
             "type": "string",
             "default": "auto",
-            "proposals": [
-                "auto",
-                "bat",
-                "builtin",
-            ],
             "enum": [
                 "auto",
                 "bat",
@@ -64,11 +54,6 @@
         "zoxideSupport": {
             "type": "string",
             "default": "auto",
-            "proposals": [
-                "auto",
-                "true",
-                "false",
-            ],
             "enum": [
                 "auto",
                 "true",
