@@ -49,10 +49,29 @@ check "missing-field warning suppressed" bash -c "grep -qx 'ignore_missing_field
 check "nerdfont off by default" bash -c "grep -qx 'nerdfont = false' '${CONFIG}'"
 check "cd_on_quit off by default" bash -c "grep -qx 'cd_on_quit = false' '${CONFIG}'"
 
-# Plugin toggles must stay off while their binaries are not installed.
-check "metadata plugin off without exiftool" bash -c "grep -qx 'metadata = false' '${CONFIG}'"
-check "code previewer left builtin" bash -c "grep -qx 'code_previewer = \"\"' '${CONFIG}'"
-check "zoxide support off" bash -c "grep -qx 'zoxide_support = false' '${CONFIG}'"
+# Plugin toggles default to 'auto', which follows what is actually on PATH.
+# Assert that contract rather than fixed values: a base image that happens to
+# ship one of these tools should flip the matching toggle, not fail the test.
+# (None of the CI base images ship them today, so in practice these assert the
+# off state - but they stay correct if that ever changes.)
+check "metadata follows exiftool on PATH" bash -c "
+    if command -v exiftool >/dev/null 2>&1; then
+        grep -qx 'metadata = true' '${CONFIG}'
+    else
+        grep -qx 'metadata = false' '${CONFIG}'
+    fi"
+check "code previewer follows bat on PATH" bash -c "
+    if command -v bat >/dev/null 2>&1; then
+        grep -qx 'code_previewer = \"bat\"' '${CONFIG}'
+    else
+        grep -qx 'code_previewer = \"\"' '${CONFIG}'
+    fi"
+check "zoxide support follows zoxide on PATH" bash -c "
+    if command -v zoxide >/dev/null 2>&1; then
+        grep -qx 'zoxide_support = true' '${CONFIG}'
+    else
+        grep -qx 'zoxide_support = false' '${CONFIG}'
+    fi"
 
 # cdOnQuit is opt-in, so nothing should have been added to the shell rc files.
 check "no cd_on_quit wrapper by default" bash -c "! test -e /usr/local/share/superfile/cd_on_quit.sh"

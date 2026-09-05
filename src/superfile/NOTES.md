@@ -16,11 +16,11 @@ The generated file is deliberately **partial**. superfile loads its built-in def
 | `auto_check_update` | `false` | Dev containers are disposable; the 24h version check against the GitHub API and its update nag are just noise. **This is the main reason the option exists.** |
 | `nerdfont` | `nerdfont` option | See below. |
 | `cd_on_quit` | `cdOnQuit` option | See below. |
-| `metadata` | `true` only with `installPreviewTools` | Needs `exiftool`. |
-| `code_previewer` | `"bat"` only with `installPreviewTools` | Needs `bat`. |
-| `zoxide_support` | `true` only with `installZoxide` | Needs `zoxide`. |
+| `metadata` | `metadata` option (default `auto`) | Needs `exiftool`. |
+| `code_previewer` | `codePreviewer` option (default `auto`) | Needs `bat`. |
+| `zoxide_support` | `zoxideSupport` option (default `auto`) | Needs `zoxide`. |
 
-Plugin toggles are only switched on when this Feature actually installed the tool they depend on, so the config never points at a binary that isn't there.
+See [Plugin toggles](#plugin-toggles) for how `auto` resolves.
 
 superfile still generates its own `hotkeys.toml` and `theme/` on first run, alongside the generated config. Set `configureDefaults: false` to keep the Feature out of the user's home entirely and get upstream's first-run behaviour (including the auto-update check).
 
@@ -44,17 +44,43 @@ A child process cannot change its parent shell's directory, so superfile writes 
 
 It is **off by default** because it defines an `spf` shell function that shadows the command and it edits the user's shell rc files.
 
+## Plugin toggles
+
+Three of superfile's features need an external binary: the detailed-metadata plugin needs `exiftool`, `bat` syntax highlighting needs `bat`, and smart directory jumping needs `zoxide`. Each has its own option — `metadata`, `codePreviewer`, `zoxideSupport` — and each defaults to **`auto`**.
+
+`auto` enables the plugin when its binary is on `PATH` at install time, **regardless of who put it there**. That matters because a Feature is layered on top of the image's own Dockerfile, so a base image that apt-installs `exiftool` itself gets the metadata plugin with no configuration:
+
+```jsonc
+// The image's Dockerfile already installs exiftool and zoxide.
+"features": {
+    "ghcr.io/bugrasan/devcontainers-features/superfile:1": {}
+}
+// -> metadata = true, zoxide_support = true, and no apt install from this Feature.
+```
+
+Previously these toggles followed `installPreviewTools` / `installZoxide` instead, so the only way to switch a plugin on was to have this Feature install a toolchain the image already had — several hundred megabytes to enable a flag.
+
+Override `auto` when you want to decide explicitly:
+
+| Option | Values | Notes |
+|--------|--------|-------|
+| `metadata` | `auto`, `true`, `false` | |
+| `codePreviewer` | `auto`, `bat`, `builtin` | `builtin` is superfile's own chroma highlighter. |
+| `zoxideSupport` | `auto`, `true`, `false` | |
+
+Forcing a plugin on without its binary present **warns but does not fail the build** — the tool may be supplied later by another Feature or at runtime. All three are ignored when `configureDefaults` is `false`.
+
 ## Optional tools
 
 superfile shells out to a handful of external programs and degrades gracefully when they are absent. Run `spf --debug-info` inside the container to see what it can currently find. None are installed by default, to keep the image small:
 
 | Option | Installs | Enables |
 |--------|----------|---------|
-| `installPreviewTools` | `ffmpeg`, `poppler-utils`, `libimage-exiftool-perl`, `bat` | Video thumbnails, PDF thumbnails (`pdftoppm`), the detailed-metadata plugin, `bat` syntax highlighting. Adds a few hundred MB. |
+| `installPreviewTools` | `ffmpeg`, `poppler-utils`, `libimage-exiftool-perl`, `bat` | Video thumbnails, PDF thumbnails (`pdftoppm`), the detailed-metadata plugin, `bat` syntax highlighting. Adds a few hundred MB. Skip it if your image already provides these — the toggles above will still find them. |
 | `installClipboardTools` | `xdg-utils`, `xclip`, `wl-clipboard` | "Open with the default application", yank to clipboard. Mostly no-ops in a headless container. |
 | `installZoxide` | `zoxide` | Smart directory jumping inside superfile. |
 
-Debian and Ubuntu package `bat` as `batcat` (the `bat` name belongs to `bacula-console-qt`), while superfile invokes `bat` — the Feature adds a `/usr/local/bin/bat` symlink so the code previewer works.
+Debian and Ubuntu package `bat` as `batcat` (the `bat` name belongs to `bacula-console-qt`), while superfile invokes `bat` — the Feature adds a `/usr/local/bin/bat` symlink so the code previewer works. That bridge runs whenever `batcat` is present, not only when this Feature installed it, so an image that apt-installs `bat` itself works too (and is then detected by `codePreviewer: auto`).
 
 ## Notes
 
