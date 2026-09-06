@@ -1,0 +1,38 @@
+{
+    "pinned_minimal": {
+        "image": "debian:latest",
+        "features": {
+            "herdr": {
+                "version": "0.8.2",
+                "configureDefaults": false,
+                "installSkill": false,
+                "installCompletions": false
+            }
+        }
+    },
+    "leading_v_version": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "herdr": {
+                "version": "v0.8.2"
+            }
+        }
+    },
+    "existing_config": {
+        "build": {
+            "dockerfile": "Dockerfile"
+        },
+        "remoteUser": "vscode",
+        "features": {
+            "herdr": {}
+        }
+    },
+    "legacy_version": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "herdr": {
+                "version": "0.7.0"
+            }
+        }
+    }
+}
