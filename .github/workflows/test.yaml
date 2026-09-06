@@ -17,6 +17,7 @@ jobs:
           - claude-code
           - otel-collector-contrib
           - superfile
+          - herdr
         baseImage:
           - debian:latest
           - ubuntu:latest
@@ -40,6 +41,7 @@ jobs:
           - pi-dev
           - speckit
           - superfile
+          - herdr
     steps:
       - uses: actions/checkout@v3
 

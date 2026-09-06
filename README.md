@@ -8,6 +8,7 @@ currently this repo contains the folling devcontainer features:
 - 'speckit', see [GitHub Spec Kit](https://github.com/github/spec-kit)
 - 'otel-collector-contrib', see [OpenTelemetry Collector Contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib)
 - 'superfile', see [superfile](https://github.com/yorukot/superfile)
+- 'herdr', see [herdr](https://github.com/herdrdev/herdr)
 
 
 ## structurizr-cli
@@ -77,5 +78,23 @@ that, the optional preview/clipboard/zoxide tools and `cd_on_quit` support.
 ```json
 "features": {
     "ghcr.io/bugrasan/devcontainers-features/superfile:1": {}
+}
+```
+
+## herdr
+Installs [herdr](https://github.com/herdrdev/herdr), the terminal multiplexer
+coding agents run on, from its official GitHub release, verified against
+upstream's published SHA-256. The Linux asset is a statically linked (musl)
+Rust binary, so nothing has to be present in the image for it to run. By
+default it also
+seeds a container-friendly `~/.config/herdr/config.toml` that skips the
+first-run wizard and stops herdr's two background calls to herdr.dev, installs
+herdr's agent skill to `~/.claude/skills/herdr/SKILL.md`, and adds bash/zsh
+completions. It installs the binary only - nothing is started; run `herdr` to
+begin or reattach to a session. See the
+[feature README](src/herdr/README.md) for the options.
+```json
+"features": {
+    "ghcr.io/bugrasan/devcontainers-features/herdr:1": {}
 }
 ```
