@@ -9,7 +9,23 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Publishing gate. Until now 'deploy' had no 'needs:', so a Feature whose
+  # tests were failing still published to ghcr - 0fd401a records structurizr-cli
+  # doing exactly that, broken across several releases. #38 made such failures
+  # visible; this stops them shipping.
+  #
+  # Reuses test.yaml rather than restating its matrix, so the gate always tests
+  # what CI tests. The cost is that a push to main which touches src/** runs the
+  # suite twice - once for test.yaml directly, once through this gate. On free
+  # runners for a ~2 minute suite that is a fair price for a gate that cannot
+  # drift from CI.
+  test:
+    uses: ./.github/workflows/test.yaml
+    permissions:
+      contents: read
+
   deploy:
+    needs: test
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
@@ -53,6 +69,17 @@ jobs:
       #   2. The commit message carries [skip ci].
       # Either alone suffices; keep both, and keep [skip ci] in the message if
       # this is ever switched to a PAT or deploy key, which would defeat (1).
+      #
+      # CAUTION, and this has bitten this repo already: that marker is matched
+      # anywhere in a commit message, not just on the first line, and it skips
+      # EVERY workflow the commit would have triggered - not only this one. So
+      # never write it literally in a commit message or in PR text that becomes
+      # a squash-merge message. Commit 02bf143 did exactly that, quoting the
+      # marker in prose while explaining this guard, and as a result its own
+      # push to main started no runs at all: not release.yaml, not even
+      # test.yaml, which has no path filter. It had to be published by hand via
+      # workflow_dispatch. Describe it as "the skip-CI marker" in prose instead.
+      # https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs
       - name: Commit documentation updates
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
