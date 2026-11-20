@@ -72,5 +72,15 @@
                 "skillCopilot": false
             }
         }
+    },
+    "existing_core": {
+        "build": {
+            "dockerfile": "Dockerfile"
+        },
+        "features": {
+            "herdr": {
+                "coreVersion": "0.1.20"
+            }
+        }
     }
 }

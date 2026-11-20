@@ -65,10 +65,16 @@ The image build needs to reach:
 
 Turning both off fails the build: a Feature that installs nothing is a misconfiguration. With `installTui: false`, the TUI-only options (`configureDefaults`, `installCompletions`, and `installTuiSkill`) do nothing. With `installCore: false`, `coreVersion` and `installCoreSkill` do nothing.
 
-Apply the Feature once per image. If the image already has `/usr/local/bin/herdr-core`, for example a base image that already ran this Feature, upstream's herdr-core script takes its update path instead of a fresh install:
+### Images that already have herdr-core
 
-- it starts a core as root during the build, and its state ends up in the image;
-- it refuses a `coreVersion` older than the installed one, which fails the build.
+The Feature always installs herdr-core fresh, also on an image that already has `/usr/local/bin/herdr-core`, for example a base image that already ran this Feature. To do that, it deletes the existing `/usr/local/bin/herdr-core` right before running upstream's script.
+
+This is a **workaround**. Without it, upstream's script finds the existing binary and takes its update path (`herdr-core update --from`), which is built for a live machine, not an image build:
+
+- it refuses a `coreVersion` older than the installed one, which fails the build;
+- it starts a core as root during the build, and that core's state (`/root/.local/state/herdr-core/`) ends up in the image.
+
+Deleting the binary makes the script take its fresh-install path, which starts nothing. An existing `hc` link is kept: it points to `herdr-core` again once the new binary is in place. The `existing_core` test scenario covers this. See [`docs/tech-debt.md`](https://github.com/bugrasan/devcontainers-features/blob/main/docs/tech-debt.md) (TD-001) for when the workaround can go.
 
 ## Generated configuration
 
@@ -110,6 +116,7 @@ Limits of the `herdr-core` skill:
 - `hc --skill` prints the manual without the frontmatter agents need to load a skill, which is why the Feature installs upstream's skill file instead.
 - Upstream publishes that file from herdr-core 0.1.13 on. With an older `coreVersion`, set `installCoreSkill: false`, or the build fails.
 - When another program already owns `hc`, the skill is skipped with a warning, since it tells agents to run `hc`.
+- **Edge case:** the Feature decides "`hc` is herdr-core" by comparing the resolved path of `hc` with the literal `/usr/local/bin/herdr-core`. If `/usr/local` or `/usr/local/bin` is itself a symlink in the image, the two paths differ, and the skill is wrongly skipped with the same warning. Common base images don't do this; the Feature does not handle it.
 - The skill also points agents to `herdr-app --skill` for the Herdr window. This Feature does not install `herdr-app`.
 
 With `skillClaudeCode` and `skillCopilot` both false, no skill is installed, whatever `installTuiSkill` and `installCoreSkill` say.
@@ -130,8 +137,8 @@ Both are picked up without editing any shell rc file: `bash-completion` lazy-loa
 [herdr-core](https://github.com/herdrdev/herdr-core) runs programs and coding agents in terminals that stay alive after the viewer leaves, and lets agents start, message, and wait on other agents. It draws no UI; the herdr TUI is the separate terminal app.
 
 - Upstream's script installs `herdr-core` plus an `hc` link, but only when no other `hc` exists (some window managers ship one).
-- Nothing is started. The core starts on first use of `hc`, as the user who runs it.
-- `hc` contacts `releases.herdr.dev` only on an explicit `hc update` or `hc machine add`, so no config is seeded. Rebuild the container, or bump `coreVersion`, instead of running `hc update`.
+- Nothing is started, also on an image that already had herdr-core (see [Images that already have herdr-core](#images-that-already-have-herdr-core)). The core starts on first use of `hc`, as the user who runs it.
+- `hc` contacts `releases.herdr.dev` only on an explicit `hc update` or `hc machine add`, so no config is seeded. Instead of running `hc update`, bump `coreVersion`, or, with `coreVersion: latest`, rebuild without cache (`--no-cache`): a cached image layer never notices a new upstream release.
 
 ```bash
 hc run --bg --name web npm run dev   # start a program that outlives this shell

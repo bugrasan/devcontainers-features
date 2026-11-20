@@ -192,11 +192,18 @@ if [ "${INSTALL_CORE}" = "true" ]; then
     CORE_VERSION="${CORE_VERSION#v}"
     if [ "${CORE_VERSION}" = "latest" ]; then CORE_VERSION=""; fi
     fetch "${CORE_INSTALL_URL}" "${tmpdir}/herdr-core-install.sh"
+    # WORKAROUND (docs/tech-debt.md TD-001): with herdr-core already present,
+    # upstream's script updates in place - refusing an older version and
+    # starting a root core whose state lands in the image. Removing the binary
+    # makes it install fresh; an existing 'hc' link resolves again afterwards.
+    rm -f "${INSTALL_DIR}/herdr-core"
     HC_VERSION="${CORE_VERSION}" HC_INSTALL_DIR="${INSTALL_DIR}" sh "${tmpdir}/herdr-core-install.sh"
 
     if [ "${INSTALL_CORE_SKILL}" = "true" ] && [ "${#SKILL_HOMES[@]}" -gt 0 ]; then
         if [ "$(readlink -f "$(command -v hc || true)")" != "${INSTALL_DIR}/herdr-core" ]; then
             # The skill tells agents to run 'hc', which is another program here.
+            # Known edge case: a symlinked /usr/local or /usr/local/bin makes
+            # the resolved path differ and skips the skill (see NOTES.md).
             echo "WARNING: 'hc' is not herdr-core in this image - skipping the herdr-core agent skill."
         else
             # 'hc --skill' prints a manual without the frontmatter agents need,
