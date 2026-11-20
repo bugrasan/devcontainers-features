@@ -18,22 +18,6 @@
             "herdr": {}
         }
     },
-    "core_pinned": {
-        "image": "debian:latest",
-        "features": {
-            "herdr": {
-                "coreVersion": "v0.1.20"
-            }
-        }
-    },
-    "existing_hc": {
-        "build": {
-            "dockerfile": "Dockerfile"
-        },
-        "features": {
-            "herdr": {}
-        }
-    },
     "core_only": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
@@ -71,26 +55,6 @@
                 "skillClaudeCode": false,
                 "skillCopilot": false
             }
-        }
-    },
-    "existing_core_older": {
-        "build": {
-            "dockerfile": "Dockerfile"
-        },
-        "remoteUser": "root",
-        "features": {
-            "herdr": {
-                "coreVersion": "0.1.20"
-            }
-        }
-    },
-    "existing_core_upgrade": {
-        "build": {
-            "dockerfile": "Dockerfile"
-        },
-        "remoteUser": "root",
-        "features": {
-            "herdr": {}
         }
     }
 }

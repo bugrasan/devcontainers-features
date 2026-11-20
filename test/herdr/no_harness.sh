@@ -6,6 +6,9 @@
 set -e
 source dev-container-features-test-lib
 
+# Upstream's scripts install to ~/.local/bin and leave PATH alone.
+export PATH="${HOME}/.local/bin:${PATH}"
+
 check "herdr installed" bash -c "command -v herdr"
 check "herdr-core installed" bash -c "command -v herdr-core"
 check "no skill for Claude Code" bash -c "! test -e '${HOME}/.claude/skills/herdr' && ! test -e '${HOME}/.claude/skills/herdr-core'"

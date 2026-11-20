@@ -2,8 +2,8 @@
     // https://containers.dev/implementors/features/
     "name": "pi-dev",
     "id": "pi-dev",
-    "version": "1.0.2",
-    "description": "Installs the Pi coding agent CLI with the official pi.dev installer, for the remote user, and links it as /usr/local/bin/pi. Requires Node.js >=22.19.0 and npm.",
+    "version": "2.0.0",
+    "description": "Installs the Pi coding agent CLI via the official pi.dev installer. Requires Node.js >=22.19.0 and npm.",
     "documentationURL": "https://pi.dev",
     "keywords": ["pi", "pi.dev", "ai"],
     // node is a hard dependency (this Feature needs npm). The rest are ordering-

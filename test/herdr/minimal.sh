@@ -7,7 +7,10 @@
 set -e
 source dev-container-features-test-lib
 
-check "herdr is on PATH" bash -c "command -v herdr"
+# Upstream's scripts install to ~/.local/bin and leave PATH alone.
+export PATH="${HOME}/.local/bin:${PATH}"
+
+check "herdr runs" bash -c "herdr --version"
 check "herdr status runs" bash -c "herdr status"
 
 # configureDefaults: false - the Feature must stay out of the user's home.
@@ -24,6 +27,6 @@ check "no bash completion written" bash -c "! test -e /usr/share/bash-completion
 check "no zsh completion written" bash -c "! test -e /usr/local/share/zsh/site-functions/_herdr"
 
 # installCore: false
-check "no herdr-core installed" bash -c "! test -e /usr/local/bin/herdr-core && ! test -e /usr/local/bin/hc"
+check "no herdr-core installed" bash -c "! test -e '${HOME}/.local/bin/herdr-core' && ! test -e '${HOME}/.local/bin/hc'"
 
 reportResults

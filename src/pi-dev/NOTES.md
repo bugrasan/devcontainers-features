@@ -1,8 +1,8 @@
 ## How it works
 
 - Runs upstream's official installer, [`https://pi.dev/install.sh`](https://pi.dev/install.sh), unchanged and as the remote user. Pi always installs its latest release.
-- Upstream's installer puts the `pi` launcher in `~/.pi/agent/bin`, which is not on `PATH`. The Feature links it as `/usr/local/bin/pi`, so the remote user's shells find it. Other users cannot: the launcher lives in the remote user's home. The launcher follows the link to find its install, so `pi update` keeps working.
+- By default, upstream installs the `pi` launcher to `~/.pi/agent/bin/pi` and does **not** add that directory to `PATH`. (It uses `~/.local/bin` or a similar home directory instead when one is already on `PATH` during the build.) Add it yourself, for example in `devcontainer.json`: `"remoteEnv": { "PATH": "${containerEnv:PATH}:/home/vscode/.pi/agent/bin" }` (use your remote user's home).
 - Requires Node.js >=22.19.0 and npm. Add a Feature that provides them (for example `ghcr.io/devcontainers/features/node`) before this one.
 - The build must reach `pi.dev` and the npm registry.
-- Running the Feature again on an image that already has it works: the Feature removes its own `/usr/local/bin/pi` link (one that points into `~/.pi/agent/bin`) before the installer runs, then links it again.
-- `pi update` works as usual. To reinstall or uninstall with upstream's installer inside the container, run `sudo rm /usr/local/bin/pi` first: otherwise the installer finds `pi` in `/usr/local/bin`, tries to put its launcher there, and fails.
+- `su` passes the build environment to upstream's installer, so `PI_*` variables set in the image change its behavior.
+- **Upgrading from pi-dev 1.0.2:** that version linked `/usr/local/bin/pi`. On an image built with it, remove that link first (`sudo rm /usr/local/bin/pi`): upstream's installer otherwise tries to put its launcher in `/usr/local/bin` and fails.

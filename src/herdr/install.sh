@@ -19,20 +19,12 @@ SKILL_COPILOT="${SKILLCOPILOT:-"true"}"
 TARGET_USER="${_REMOTE_USER:-root}"
 TARGET_USER_HOME="${_REMOTE_USER_HOME:-}"
 
-# Upstream's official install scripts, run unchanged. Both default to
-# $HOME/.local/bin; the Feature points them at a system-wide directory.
+# Upstream's official install scripts, run unchanged.
 TUI_INSTALL_URL="https://herdr.dev/install.sh"
 CORE_INSTALL_URL="https://releases.herdr.dev/core/install.sh"
 CORE_SKILL_BASE_URL="https://raw.githubusercontent.com/herdrdev/herdr-core"
-INSTALL_DIR="/usr/local/bin"
 BASH_COMPLETION_DIR="/usr/share/bash-completion/completions"
 ZSH_COMPLETION_DIR="/usr/local/share/zsh/site-functions"
-
-# A Feature that installs nothing is a misconfiguration - fail the build.
-if [ "${INSTALL_TUI}" != "true" ] && [ "${INSTALL_CORE}" != "true" ]; then
-    echo "ERROR: 'installTui' and 'installCore' are both false - nothing to install."
-    exit 1
-fi
 
 APT_UPDATED="false"
 
@@ -70,24 +62,11 @@ if [ -z "${TARGET_USER_HOME}" ]; then
     TARGET_USER_HOME="$([ "${TARGET_USER}" = "root" ] && echo /root || echo "/home/${TARGET_USER}")"
 fi
 TARGET_GROUP="$(id -gn "${TARGET_USER}" 2>/dev/null || echo "${TARGET_USER}")"
-# The per-user steps below need a home the remote user owns.
-if [ ! -d "${TARGET_USER_HOME}" ]; then
-    mkdir -p "${TARGET_USER_HOME}"
-    chown "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}" 2>/dev/null || true
-fi
+# Both scripts install per user, into their default ~/.local/bin.
+BIN_DIR="${TARGET_USER_HOME}/.local/bin"
 
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "${tmpdir}"' EXIT
-
-# Download a file, failing the build with a clear message. Upstream's scripts
-# are saved first rather than piped into sh, so a failed download can never
-# run as an empty or truncated script.
-fetch() {
-    if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 "$1" -o "$2"; then
-        echo "ERROR: could not download $1."
-        exit 1
-    fi
-}
 
 # Agent harnesses that receive the skills: Claude Code reads personal skills
 # from ~/.claude/skills, GitHub Copilot CLI from ~/.copilot/skills.
@@ -114,10 +93,9 @@ install_skill() {
 # --- herdr TUI ---------------------------------------------------------------
 
 if [ "${INSTALL_TUI}" = "true" ]; then
-    # The command https://herdr.dev/tui/ documents. It always installs the
-    # latest release and verifies it against upstream's SHA-256 manifest.
-    fetch "${TUI_INSTALL_URL}" "${tmpdir}/herdr-install.sh"
-    HERDR_INSTALL_DIR="${INSTALL_DIR}" sh "${tmpdir}/herdr-install.sh"
+    # The installer named in https://herdr.dev/tui/docs/install/, run as the
+    # remote user. pipefail (needs bash) makes a failed download fail the build.
+    su -s /bin/bash "${TARGET_USER}" -c "set -o pipefail; curl -fsSL ${TUI_INSTALL_URL} | sh"
 
     CONFIG_DIR="${TARGET_USER_HOME}/.config/herdr"
     CONFIG_FILE="${CONFIG_DIR}/config.toml"
@@ -148,10 +126,10 @@ if [ "${INSTALL_TUI}" = "true" ]; then
 onboarding = false
 
 [update]
-#-- Dev containers are disposable and herdr is installed system-wide when the
-#-- image is built, so both background calls to herdr.dev are noise: 'herdr
-#-- update', run as this user, cannot replace /usr/local/bin/herdr, and the
-#-- agent-detection manifest that ships with the installed binary matches it.
+#-- Dev containers are disposable and herdr is installed when the image is
+#-- built, so both background calls to herdr.dev are noise: rebuilding the
+#-- image is the update path, and the agent-detection manifest that ships
+#-- with the installed binary matches it.
 #-- Set the Feature's 'configureDefaults' option to false for upstream
 #-- behaviour. 'channel' is deliberately left unset so it keeps its default.
 version_check = false
@@ -170,15 +148,15 @@ EOF
         # rc file: bash-completion lazy-loads by command name, and
         # /usr/local/share/zsh/site-functions is on zsh's compiled-in fpath.
         mkdir -p "${BASH_COMPLETION_DIR}" "${ZSH_COMPLETION_DIR}"
-        "${INSTALL_DIR}/herdr" completion bash > "${BASH_COMPLETION_DIR}/herdr"
-        "${INSTALL_DIR}/herdr" completion zsh > "${ZSH_COMPLETION_DIR}/_herdr"
+        "${BIN_DIR}/herdr" completion bash > "${BASH_COMPLETION_DIR}/herdr"
+        "${BIN_DIR}/herdr" completion zsh > "${ZSH_COMPLETION_DIR}/_herdr"
         chmod 0644 "${BASH_COMPLETION_DIR}/herdr" "${ZSH_COMPLETION_DIR}/_herdr"
         echo "Installed bash and zsh completions."
     fi
 
     if [ "${INSTALL_TUI_SKILL}" = "true" ] && [ "${#SKILL_HOMES[@]}" -gt 0 ]; then
         # 'herdr --skill' prints the skill bundled with the installed binary.
-        "${INSTALL_DIR}/herdr" --skill > "${tmpdir}/herdr-SKILL.md"
+        "${BIN_DIR}/herdr" --skill > "${tmpdir}/herdr-SKILL.md"
         install_skill herdr "${tmpdir}/herdr-SKILL.md"
     fi
 fi
@@ -186,34 +164,20 @@ fi
 # --- herdr-core (hc) ---------------------------------------------------------
 
 if [ "${INSTALL_CORE}" = "true" ]; then
-    # Upstream's script installs herdr-core plus an 'hc' link (only when no
-    # other 'hc' exists) and verifies the archive's SHA-256. It pins through
-    # HC_VERSION, a bare version like '0.1.21'; empty means the latest.
+    # Run as the remote user. Upstream's script pins through HC_VERSION, a
+    # bare version like '0.1.21'; empty means the latest.
     CORE_VERSION="${CORE_VERSION#v}"
     if [ "${CORE_VERSION}" = "latest" ]; then CORE_VERSION=""; fi
-    fetch "${CORE_INSTALL_URL}" "${tmpdir}/herdr-core-install.sh"
-    # WORKAROUND (README.md, TD-001): with herdr-core already present,
-    # upstream's script updates in place - refusing an older version and
-    # starting a root core whose state lands in the image. Removing the binary
-    # makes it install fresh; an existing 'hc' link resolves again afterwards.
-    rm -f "${INSTALL_DIR}/herdr-core"
-    HC_VERSION="${CORE_VERSION}" HC_INSTALL_DIR="${INSTALL_DIR}" sh "${tmpdir}/herdr-core-install.sh"
+    HC_VERSION="${CORE_VERSION}" su -s /bin/bash "${TARGET_USER}" -c "set -o pipefail; curl -fsSL ${CORE_INSTALL_URL} | sh"
 
     if [ "${INSTALL_CORE_SKILL}" = "true" ] && [ "${#SKILL_HOMES[@]}" -gt 0 ]; then
-        if [ "$(readlink -f "$(command -v hc || true)")" != "${INSTALL_DIR}/herdr-core" ]; then
-            # The skill tells agents to run 'hc', which is another program here.
-            # Known edge case: a symlinked /usr/local or /usr/local/bin makes
-            # the resolved path differ and skips the skill (see NOTES.md).
-            echo "WARNING: 'hc' is not herdr-core in this image - skipping the herdr-core agent skill."
-        else
-            # 'hc --skill' prints a manual without the frontmatter agents need,
-            # so take upstream's skill file from the installed version's tag
-            # (published from 0.1.13 on); it tells the agent to read that
-            # manual from the binary.
-            installed="$("${INSTALL_DIR}/herdr-core" --version | awk '{ print $2 }')"
-            fetch "${CORE_SKILL_BASE_URL}/v${installed}/skills/herdr-core/SKILL.md" "${tmpdir}/herdr-core-SKILL.md"
-            install_skill herdr-core "${tmpdir}/herdr-core-SKILL.md"
-        fi
+        # 'hc --skill' prints a manual without the frontmatter agents need,
+        # so take upstream's skill file from the installed version's tag
+        # (published from 0.1.13 on); it tells the agent to read that
+        # manual from the binary.
+        installed="$("${BIN_DIR}/herdr-core" --version | awk '{ print $2 }')"
+        curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 "${CORE_SKILL_BASE_URL}/v${installed}/skills/herdr-core/SKILL.md" -o "${tmpdir}/herdr-core-SKILL.md"
+        install_skill herdr-core "${tmpdir}/herdr-core-SKILL.md"
     fi
 fi
 
@@ -224,5 +188,5 @@ if [ "${APT_UPDATED}" = "true" ]; then
 fi
 
 echo "Done! Installed for remote user '${TARGET_USER}':"
-if [ "${INSTALL_TUI}" = "true" ]; then "${INSTALL_DIR}/herdr" --version; fi
-if [ "${INSTALL_CORE}" = "true" ]; then "${INSTALL_DIR}/herdr-core" --version; fi
+if [ "${INSTALL_TUI}" = "true" ]; then "${BIN_DIR}/herdr" --version; fi
+if [ "${INSTALL_CORE}" = "true" ]; then "${BIN_DIR}/herdr-core" --version; fi

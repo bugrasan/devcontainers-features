@@ -6,6 +6,9 @@
 set -e
 source dev-container-features-test-lib
 
+# Upstream's scripts install to ~/.local/bin and leave PATH alone.
+export PATH="${HOME}/.local/bin:${PATH}"
+
 for name in herdr herdr-core; do
     check "${name} skill for Copilot" bash -c "head -3 '${HOME}/.copilot/skills/${name}/SKILL.md' | grep -qx 'name: ${name}'"
     check "${name} skill owned by the remote user" bash -c "test -O '${HOME}/.copilot/skills/${name}/SKILL.md'"
