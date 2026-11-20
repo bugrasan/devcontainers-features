@@ -1,20 +1,11 @@
 {
-    "pinned_minimal": {
+    "minimal": {
         "image": "debian:latest",
         "features": {
             "herdr": {
-                "version": "0.8.2",
                 "configureDefaults": false,
-                "installSkill": false,
-                "installCompletions": false
-            }
-        }
-    },
-    "leading_v_version": {
-        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-        "features": {
-            "herdr": {
-                "version": "v0.8.2"
+                "installCompletions": false,
+                "installCore": false
             }
         }
     },
@@ -27,12 +18,79 @@
             "herdr": {}
         }
     },
-    "legacy_version": {
+    "core_pinned": {
+        "image": "debian:latest",
+        "features": {
+            "herdr": {
+                "coreVersion": "v0.1.20"
+            }
+        }
+    },
+    "existing_hc": {
+        "build": {
+            "dockerfile": "Dockerfile"
+        },
+        "features": {
+            "herdr": {}
+        }
+    },
+    "core_only": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
             "herdr": {
-                "version": "0.7.0"
+                "installTui": false
             }
+        }
+    },
+    "skills_copilot_only": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "remoteUser": "vscode",
+        "features": {
+            "herdr": {
+                "installTuiSkill": true,
+                "skillClaudeCode": false
+            }
+        }
+    },
+    "skills_tui_claude_only": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "remoteUser": "vscode",
+        "features": {
+            "herdr": {
+                "installTuiSkill": true,
+                "installCoreSkill": false,
+                "skillCopilot": false
+            }
+        }
+    },
+    "no_harness": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "herdr": {
+                "installTuiSkill": true,
+                "skillClaudeCode": false,
+                "skillCopilot": false
+            }
+        }
+    },
+    "existing_core_older": {
+        "build": {
+            "dockerfile": "Dockerfile"
+        },
+        "remoteUser": "root",
+        "features": {
+            "herdr": {
+                "coreVersion": "0.1.20"
+            }
+        }
+    },
+    "existing_core_upgrade": {
+        "build": {
+            "dockerfile": "Dockerfile"
+        },
+        "remoteUser": "root",
+        "features": {
+            "herdr": {}
         }
     }
 }

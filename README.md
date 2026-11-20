@@ -82,19 +82,32 @@ that, the optional preview/clipboard/zoxide tools and `cd_on_quit` support.
 ```
 
 ## herdr
-Installs [herdr](https://github.com/herdrdev/herdr), the terminal multiplexer
-coding agents run on, from its official GitHub release, verified against
-upstream's published SHA-256. The Linux asset is a statically linked (musl)
-Rust binary, so nothing has to be present in the image for it to run. By
-default it also
-seeds a container-friendly `~/.config/herdr/config.toml` that skips the
-first-run wizard and stops herdr's two background calls to herdr.dev, installs
-herdr's agent skill to `~/.claude/skills/herdr/SKILL.md`, and adds bash/zsh
-completions. It installs the binary only - nothing is started; run `herdr` to
-begin or reattach to a session. See the
+Installs the [herdr](https://github.com/herdrdev/herdr) TUI (`herdr`) and
+[herdr-core](https://github.com/herdrdev/herdr-core) (`hc`), the headless core
+that keeps programs and agents running in terminals that outlive the viewer.
+Both are installed with upstream's official install scripts, into
+`/usr/local/bin`, and both are optional (`installTui`, `installCore`; turning
+both off fails the build). The herdr TUI script always installs the latest
+release; herdr-core can be pinned with `coreVersion`. By default it also seeds
+a container-friendly `~/.config/herdr/config.toml`, adds bash/zsh completions,
+and installs the herdr-core agent skill for Claude Code and GitHub Copilot CLI
+(herdr's own skill is opt-in). The build must reach `herdr.dev`, `github.com`,
+`release-assets.githubusercontent.com`, `releases.herdr.dev`, and
+`raw.githubusercontent.com`. Nothing is started; run
+`herdr` to begin or reattach to a session. See the
 [feature README](src/herdr/README.md) for the options.
 ```json
 "features": {
-    "ghcr.io/bugrasan/devcontainers-features/herdr:1": {}
+    "ghcr.io/bugrasan/devcontainers-features/herdr:2": {}
 }
 ```
+
+## Maintainer notes
+
+- **Tests:** `devcontainer features test --features <feature> --base-image mcr.microsoft.com/devcontainers/base:ubuntu .` runs `test/<feature>/test.sh` and every scenario in `test/<feature>/scenarios.json`.
+- **herdr installs only through upstream's official scripts** (`herdr.dev/install.sh`, `releases.herdr.dev/core/install.sh`). The TUI script cannot pin a version, so the Feature cannot either; rebuild without cache to update.
+- **Workaround TD-001 (herdr):** `src/herdr/install.sh` deletes `/usr/local/bin/herdr-core` before running upstream's installer.
+  - Why: with the binary present, the installer runs [`update --from`](https://github.com/herdrdev/herdr-core/blob/c7517808d64f06609e4ecf0db1757005373cc3a3/distribution/install.sh#L109-L111). In an image build that refuses an older `coreVersion` and starts a root core whose state lands in the image.
+  - Tests: `existing_core_older` and `existing_core_upgrade`.
+  - Upstream issue: none filed yet.
+  - Remove when upstream's installer offers a non-interactive fresh install.
