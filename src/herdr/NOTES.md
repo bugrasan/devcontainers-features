@@ -12,6 +12,9 @@ The Feature runs upstream's official install scripts, unchanged, as the remote u
 - Each script verifies its download against the SHA-256 in upstream's release manifest.
 - The Feature's own `install.sh` is `bash` and bootstraps what the scripts need (`curl`, `ca-certificates`, `coreutils`, and, for herdr-core, `tar` and `gzip`) with `apt-get`. It targets Debian- and Ubuntu-family base images, like the other Features in this repository. It does not run on Alpine.
 
+- `su` passes the build environment to upstream's scripts, so `HERDR_INSTALL_DIR`, `HC_INSTALL_DIR`, or `HERDR_RELEASES_URL` set in the image change where they install, and the Feature's config, completion, and skill steps then fail.
+- **Upgrading from herdr 2.x:** that version installed into `/usr/local/bin`. On an image built with it, remove `/usr/local/bin/herdr`, `/usr/local/bin/herdr-core`, and `/usr/local/bin/hc` first: otherwise they shadow the new binaries, and the old `hc` stops upstream's script from creating `~/.local/bin/hc`.
+
 ### Versions
 
 - **herdr TUI:** upstream's script always installs the latest release. It cannot pin a version, so neither can this Feature. A cached image layer never notices a new upstream release: rebuild without cache (`--no-cache`) to update.
@@ -100,7 +103,7 @@ Both are picked up without editing any shell rc file: `bash-completion` lazy-loa
 
 [herdr-core](https://github.com/herdrdev/herdr-core) runs programs and coding agents in terminals that stay alive after the viewer leaves, and lets agents start, message, and wait on other agents. It draws no UI; the herdr TUI is the separate terminal app.
 
-- Upstream's script installs `herdr-core` plus an `hc` link, but only when no other `hc` exists (some window managers ship one). The herdr-core skill tells agents to run `hc`, so it only works where `hc` is herdr-core.
+- Upstream's script installs `herdr-core` plus an `hc` link, but only when no other `hc` exists (some window managers ship one). The Feature installs the herdr-core skill either way. It tells agents to run `hc`, so it only works where `hc` is herdr-core.
 - On a fresh install, nothing is started. The core starts on first use of `hc`, as the user who runs it.
 - `hc` contacts `releases.herdr.dev` only on an explicit `hc update` or `hc machine add`, so no config is seeded.
 

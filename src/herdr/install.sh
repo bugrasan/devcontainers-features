@@ -93,7 +93,8 @@ install_skill() {
 # --- herdr TUI ---------------------------------------------------------------
 
 if [ "${INSTALL_TUI}" = "true" ]; then
-    # The command https://herdr.dev/tui/ documents, run as the remote user.
+    # The installer named in https://herdr.dev/tui/docs/install/, run as the
+    # remote user.
     su "${TARGET_USER}" -c "curl -fsSL ${TUI_INSTALL_URL} | sh"
 
     CONFIG_DIR="${TARGET_USER_HOME}/.config/herdr"
@@ -167,7 +168,7 @@ if [ "${INSTALL_CORE}" = "true" ]; then
     # bare version like '0.1.21'; empty means the latest.
     CORE_VERSION="${CORE_VERSION#v}"
     if [ "${CORE_VERSION}" = "latest" ]; then CORE_VERSION=""; fi
-    su "${TARGET_USER}" -c "curl -fsSL ${CORE_INSTALL_URL} | HC_VERSION='${CORE_VERSION}' sh"
+    HC_VERSION="${CORE_VERSION}" su "${TARGET_USER}" -c "curl -fsSL ${CORE_INSTALL_URL} | sh"
 
     if [ "${INSTALL_CORE_SKILL}" = "true" ] && [ "${#SKILL_HOMES[@]}" -gt 0 ]; then
         # 'hc --skill' prints a manual without the frontmatter agents need,
@@ -175,7 +176,7 @@ if [ "${INSTALL_CORE}" = "true" ]; then
         # (published from 0.1.13 on); it tells the agent to read that
         # manual from the binary.
         installed="$("${BIN_DIR}/herdr-core" --version | awk '{ print $2 }')"
-        curl -fsSL "${CORE_SKILL_BASE_URL}/v${installed}/skills/herdr-core/SKILL.md" -o "${tmpdir}/herdr-core-SKILL.md"
+        curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 "${CORE_SKILL_BASE_URL}/v${installed}/skills/herdr-core/SKILL.md" -o "${tmpdir}/herdr-core-SKILL.md"
         install_skill herdr-core "${tmpdir}/herdr-core-SKILL.md"
     fi
 fi

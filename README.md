@@ -37,7 +37,7 @@ Requires Node.js >=22.19.0 and npm - add a Feature that provides them (e.g.
 `ghcr.io/devcontainers/features/node`) before this one.
 ```json
 "features": {
-    "ghcr.io/bugrasan/devcontainers-features/pi-dev:1": {}
+    "ghcr.io/bugrasan/devcontainers-features/pi-dev:2": {}
 }
 ```
 
@@ -88,8 +88,8 @@ that keeps programs and agents running in terminals that outlive the viewer.
 Both are installed by running upstream's official install scripts unchanged,
 as the remote user, into their default `~/.local/bin` (not added to `PATH`),
 and both are optional (`installTui`, `installCore`). The herdr TUI script
-always installs the latest
-release; herdr-core can be pinned with `coreVersion`. By default it also seeds
+always installs the latest release; herdr-core can be pinned with
+`coreVersion`. By default it also seeds
 a container-friendly `~/.config/herdr/config.toml`, adds bash/zsh completions,
 and installs the herdr-core agent skill for Claude Code and GitHub Copilot CLI
 (herdr's own skill is opt-in). The build must reach `herdr.dev`, `github.com`,
@@ -106,4 +106,4 @@ and installs the herdr-core agent skill for Claude Code and GitHub Copilot CLI
 ## Maintainer notes
 
 - **Tests:** `devcontainer features test --features <feature> --base-image mcr.microsoft.com/devcontainers/base:ubuntu .` runs `test/<feature>/test.sh` and every scenario in `test/<feature>/scenarios.json`.
-- **herdr and pi-dev install only through upstream's official scripts, unchanged** (`herdr.dev/install.sh`, `releases.herdr.dev/core/install.sh`, `pi.dev/install.sh`), run as the remote user with their default install locations. The Features add no links, no install-directory overrides, and no workarounds around those scripts.
+- **herdr and pi-dev install only through upstream's official scripts, unchanged** (`herdr.dev/install.sh`, `releases.herdr.dev/core/install.sh`, `pi.dev/install.sh`), run as the remote user with their default install locations. The Features add no links, no install-directory overrides, and no workarounds around those scripts. pi-dev passes the node Feature's bin directory on `PATH` to its installer (kept from 1.0.1), since `su` resets `PATH`.
