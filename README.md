@@ -28,7 +28,7 @@ Each Feature artifact holds `devcontainer-feature-<feature>.tgz`, a tarball of `
 
 ## Maintainer notes
 
-- Tests: `.github/workflows/test.yaml` holds the exact `devcontainer features test` command for each Feature
+- Tests: `.github/workflows/test.yaml` holds the test commands CI runs; it does not test twilio-cli
 - Release: a push to `main` that changes `src/**`, or a manual run, runs the tests, publishes to ghcr.io, and commits the regenerated Feature READMEs
 - Tech-debt workaround TD-001 (herdr): `src/herdr/install.sh` deletes `/usr/local/bin/herdr-core` before upstream's installer runs
   - Why: with the binary present, the installer runs [`update --from`](https://github.com/herdrdev/herdr-core/blob/c7517808d64f06609e4ecf0db1757005373cc3a3/distribution/install.sh#L109-L111)
