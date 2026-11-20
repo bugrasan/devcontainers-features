@@ -8,6 +8,8 @@ HERDR_VERSION="${VERSION:-"latest"}"
 CONFIGURE_DEFAULTS="${CONFIGUREDEFAULTS:-"true"}"
 INSTALL_SKILL="${INSTALLSKILL:-"true"}"
 INSTALL_COMPLETIONS="${INSTALLCOMPLETIONS:-"true"}"
+INSTALL_CORE="${INSTALLCORE:-"true"}"
+CORE_VERSION="${COREVERSION:-"latest"}"
 
 # The 'install.sh' entrypoint script is always executed as the root user.
 # For more details, see https://containers.dev/implementors/features#user-env-var
@@ -22,6 +24,9 @@ MANIFEST_URL="https://raw.githubusercontent.com/herdrdev/herdr/master/distributi
 INSTALL_DIR="/usr/local/bin"
 BASH_COMPLETION_DIR="/usr/share/bash-completion/completions"
 ZSH_COMPLETION_DIR="/usr/local/share/zsh/site-functions"
+# herdr-core ships only through upstream's own release service, not as GitHub
+# release assets, so this is the one host outside GitHub the build needs.
+CORE_RELEASES_URL="https://releases.herdr.dev/core"
 
 APT_UPDATED="false"
 
@@ -41,6 +46,11 @@ apt_install() {
 MISSING_TOOLS=()
 command -v curl >/dev/null 2>&1 || MISSING_TOOLS+=(ca-certificates curl)
 command -v sha256sum >/dev/null 2>&1 || MISSING_TOOLS+=(coreutils)
+# herdr-core is released as a .tar.gz archive, unlike herdr's bare binary.
+if [ "${INSTALL_CORE}" = "true" ]; then
+    command -v tar >/dev/null 2>&1 || MISSING_TOOLS+=(tar)
+    command -v gzip >/dev/null 2>&1 || MISSING_TOOLS+=(gzip)
+fi
 if [ "${#MISSING_TOOLS[@]}" -gt 0 ]; then
     apt_install "${MISSING_TOOLS[@]}"
 fi
@@ -59,6 +69,21 @@ TARGET="linux-${ARCH}"
 
 # Accept both '0.8.2' and 'v0.8.2' for the pinned case.
 HERDR_VERSION="${HERDR_VERSION#v}"
+
+# Validate herdr-core's version up front, so a typo fails before any download.
+# Accept both '0.1.21' and 'v0.1.21'; reject anything else before it ends up
+# in a URL.
+if [ "${INSTALL_CORE}" = "true" ]; then
+    CORE_VERSION="${CORE_VERSION#v}"
+    if [ "${CORE_VERSION}" = "latest" ]; then
+        CORE_MANIFEST_URL="${CORE_RELEASES_URL}/latest.json"
+    elif printf '%s' "${CORE_VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        CORE_MANIFEST_URL="${CORE_RELEASES_URL}/${CORE_VERSION}/manifest.json"
+    else
+        echo "ERROR: invalid 'coreVersion' '${CORE_VERSION}' - use 'latest' or an exact version like '0.1.21'."
+        exit 1
+    fi
+fi
 
 # Pull the release manifest once: it resolves 'latest' AND carries the
 # per-target SHA-256 checksums used to verify the download below. Missing it
@@ -291,6 +316,92 @@ if [ "${INSTALL_COMPLETIONS}" = "true" ]; then
     fi
 fi
 
+# --- herdr-core (hc) -------------------------------------------------------
+
+if [ "${INSTALL_CORE}" = "true" ]; then
+    # One manifest answers version, download URL and SHA-256 for every target.
+    # Unlike herdr's manifest it has no fallback source, so failing to read it
+    # fails the build: an unverified core is never installed.
+    if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 30 "${CORE_MANIFEST_URL}" -o "${tmpdir}/core-manifest.json"; then
+        echo "ERROR: could not fetch the herdr-core release manifest from ${CORE_MANIFEST_URL}."
+        echo "       Check that releases.herdr.dev is reachable from the build, and that"
+        echo "       herdr-core ${CORE_VERSION} exists. Set 'installCore' to false to skip it."
+        exit 1
+    fi
+
+    # Same approach as upstream's install.sh: the manifest is flat enough to
+    # read with sed once whitespace is gone. Target names match herdr's.
+    core_flat="$(tr -d '\n\r\t ' < "${tmpdir}/core-manifest.json")"
+    core_entry="$(printf '%s' "${core_flat}" | sed -n "s/.*\"${TARGET}\":{\([^}]*\)}.*/\1/p")"
+    CORE_URL="$(printf '%s' "${core_entry}" | sed -n 's/.*"url":"\([^"]*\)".*/\1/p')"
+    CORE_SHA256="$(printf '%s' "${core_entry}" | sed -n 's/.*"sha256":"\([0-9a-fA-F]\{64\}\)".*/\1/p' | tr 'A-F' 'a-f')"
+    CORE_RESOLVED="$(printf '%s' "${core_flat}" | sed -n 's/^{"version":"\([^"]*\)".*/\1/p')"
+    if [ -z "${CORE_URL}" ] || [ -z "${CORE_SHA256}" ] || [ -z "${CORE_RESOLVED}" ]; then
+        echo "ERROR: the herdr-core manifest ${CORE_MANIFEST_URL} lists no version, or no ${TARGET} build with a SHA-256."
+        exit 1
+    fi
+    # Only download from upstream's own release service.
+    case "${CORE_URL}" in
+        "${CORE_RELEASES_URL}"/*) ;;
+        *)
+            echo "ERROR: the herdr-core manifest points outside ${CORE_RELEASES_URL}: ${CORE_URL}"
+            exit 1
+            ;;
+    esac
+
+    echo "Installing herdr-core ${CORE_RESOLVED} (${TARGET})..."
+    if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 300 -o "${tmpdir}/herdr-core.tar.gz" "${CORE_URL}"; then
+        echo "ERROR: could not download ${CORE_URL}."
+        exit 1
+    fi
+    CORE_ACTUAL_SHA256="$(sha256sum < "${tmpdir}/herdr-core.tar.gz" | awk '{ print $1 }')"
+    if [ "${CORE_ACTUAL_SHA256}" != "${CORE_SHA256}" ]; then
+        echo "ERROR: checksum mismatch for herdr-core-${TARGET} ${CORE_RESOLVED}."
+        echo "       expected ${CORE_SHA256}"
+        echo "       actual   ${CORE_ACTUAL_SHA256}"
+        exit 1
+    fi
+    echo "Verified SHA-256 ${CORE_SHA256}."
+
+    # The archive holds the static 'herdr-core' binary plus its licenses.
+    mkdir -p "${tmpdir}/core"
+    tar -xzf "${tmpdir}/herdr-core.tar.gz" -C "${tmpdir}/core" herdr-core
+    install -m 0755 "${tmpdir}/core/herdr-core" "${INSTALL_DIR}/herdr-core"
+
+    # Upstream names the binary herdr-core and adds 'hc' only when no other
+    # 'hc' exists (some window managers ship one). Do the same, system-wide;
+    # a link left by an earlier run of this Feature is refreshed.
+    if [ -L "${INSTALL_DIR}/hc" ] && [ "$(readlink "${INSTALL_DIR}/hc")" = "herdr-core" ]; then
+        :
+    elif command -v hc >/dev/null 2>&1 || [ -e "${INSTALL_DIR}/hc" ]; then
+        echo "WARNING: an 'hc' command already exists ($(command -v hc || echo "${INSTALL_DIR}/hc")) - herdr-core is available as 'herdr-core' only."
+    else
+        ln -s herdr-core "${INSTALL_DIR}/hc"
+    fi
+
+    # Its agent skill rides on the same 'installSkill' option as herdr's: two
+    # separate skills, because the two CLIs are different tools. 'hc --skill'
+    # prints the full manual without the frontmatter Claude Code needs, so
+    # install upstream's skill file from the matching release tag instead; it
+    # tells the agent to read that manual from the installed binary.
+    if [ "${INSTALL_SKILL}" = "true" ]; then
+        CORE_SKILL_DIR="${TARGET_USER_HOME}/.claude/skills/herdr-core"
+        CORE_SKILL_URL="https://raw.githubusercontent.com/herdrdev/herdr-core/v${CORE_RESOLVED}/skills/herdr-core/SKILL.md"
+        if curl -fsSL --retry 3 --connect-timeout 10 --max-time 30 "${CORE_SKILL_URL}" -o "${tmpdir}/CORE_SKILL.md" &&
+            head -2 "${tmpdir}/CORE_SKILL.md" | grep -qx 'name: herdr-core'; then
+            mkdir -p "${CORE_SKILL_DIR}"
+            install -m 0644 "${tmpdir}/CORE_SKILL.md" "${CORE_SKILL_DIR}/SKILL.md"
+            chown "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}/.claude" 2>/dev/null || true
+            chown -R "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}/.claude/skills" 2>/dev/null || true
+            echo "Installed the herdr-core agent skill to ${CORE_SKILL_DIR}/SKILL.md."
+        else
+            echo "WARNING: no herdr-core agent skill found at ${CORE_SKILL_URL} - skipping it."
+        fi
+    fi
+
+    "${INSTALL_DIR}/herdr-core" --version
+fi
+
 # Only clean up what we caused - leave the image's apt state alone otherwise.
 if [ "${APT_UPDATED}" = "true" ]; then
     apt-get clean
@@ -300,3 +411,6 @@ fi
 "${INSTALL_DIR}/herdr" --version
 
 echo "Done! herdr ${HERDR_VERSION} installed as '${INSTALL_DIR}/herdr' for remote user '${TARGET_USER}'."
+if [ "${INSTALL_CORE}" = "true" ]; then
+    echo "      herdr-core ${CORE_RESOLVED} installed as '${INSTALL_DIR}/herdr-core'."
+fi

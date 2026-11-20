@@ -6,7 +6,8 @@
                 "version": "0.8.2",
                 "configureDefaults": false,
                 "installSkill": false,
-                "installCompletions": false
+                "installCompletions": false,
+                "installCore": false
             }
         }
     },
@@ -32,6 +33,16 @@
         "features": {
             "herdr": {
                 "version": "0.7.0"
+            }
+        }
+    },
+    "core_pinned": {
+        "image": "debian:latest",
+        "features": {
+            "herdr": {
+                "version": "0.8.2",
+                "coreVersion": "v0.1.20",
+                "installSkill": false
             }
         }
     }

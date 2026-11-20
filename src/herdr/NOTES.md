@@ -14,7 +14,7 @@
 - it installs into `$HOME/.local/bin`, which is per-user and not necessarily on `PATH`
 - it requires `herdr.dev` to be reachable from the image build
 
-This Feature keeps the one part worth keeping — the SHA-256 check — and reads the same manifest from `raw.githubusercontent.com`, so the build only ever needs to reach GitHub.
+This Feature keeps the one part worth keeping — the SHA-256 check — and reads the same manifest from `raw.githubusercontent.com`, so installing herdr itself only needs to reach GitHub. herdr-core is the exception: see below.
 
 ## Generated configuration
 
@@ -61,6 +61,24 @@ With `installCompletions` (default `true`) the Feature writes the output of `her
 Both are picked up without editing any shell rc file: `bash-completion` lazy-loads by command name, and `/usr/local/share/zsh/site-functions` is on zsh's compiled-in `fpath`. bash completion additionally needs the `bash-completion` package, which the common devcontainer base images already provide.
 
 `herdr completion` was added in 0.7.1. Pinning an older release warns and skips the completions rather than failing the build.
+
+## herdr-core (`hc`)
+
+With `installCore` (default `true`) the Feature also installs [herdr-core](https://github.com/herdrdev/herdr-core), the headless core whose CLI is `hc`. It runs programs and coding agents in terminals that stay alive after the viewer leaves, and lets agents start, message, and wait on other agents. It draws no UI; herdr is the separate TUI.
+
+- Installed as `/usr/local/bin/herdr-core`, plus an `hc` symlink, but only when no other `hc` exists, matching upstream's installer (some window managers ship an `hc`).
+- `coreVersion: latest` (the default) resolves at build time; pin an exact release (`"0.1.21"` or `"v0.1.21"`) for reproducible builds. It is independent of herdr's `version`: the two products are versioned separately.
+- Downloaded from `releases.herdr.dev`, the **only** place upstream publishes herdr-core builds; there are no GitHub release assets. The archive is verified against the SHA-256 in that release service's manifest, and the build fails if the manifest is unreachable, so the image build must be able to reach `releases.herdr.dev`.
+- With `installSkill`, upstream's skill file ([`skills/herdr-core/SKILL.md`](https://github.com/herdrdev/herdr-core/blob/master/skills/herdr-core/SKILL.md), taken from the matching release tag) goes to `~/.claude/skills/herdr-core/SKILL.md`, next to herdr's own skill. It is a short pointer: it tells the agent to run `hc --skill`, which prints the full manual bundled with the installed binary. Unlike herdr's skill it is not inert outside a session: when `HC_TERMINAL_ID` is unset, it tells the agent to ask the user once whether to use `hc`. A missing skill file only warns.
+- Nothing is started. The core starts on first use of `hc`, as the user who runs it. `hc` contacts `releases.herdr.dev` only on an explicit `hc update` or `hc machine add`, so no config is seeded. `hc update` would replace the image's binary; rebuild the container or bump `coreVersion` instead.
+
+```bash
+hc run --bg --name web npm run dev   # start a program that outlives this shell
+hc ls                                # list live terminals
+hc read web --lines 50               # read output without attaching
+```
+
+Set `installCore: false` to skip herdr-core and keep the build reaching GitHub only.
 
 ## Notes
 

@@ -84,6 +84,22 @@ check "bash completion sources and registers herdr" bash -c "
     complete -p herdr >/dev/null"
 check "zsh completion is a compdef for herdr" bash -c "head -1 '${ZSH_COMPLETION}' | grep -qx '#compdef herdr'"
 
+# installCore defaults to true: herdr-core with its 'hc' link and agent skill.
+CORE_SKILL="${HOME}/.claude/skills/herdr-core/SKILL.md"
+check "herdr-core installed at /usr/local/bin/herdr-core" bash -c "test -x /usr/local/bin/herdr-core"
+check "hc links to herdr-core" bash -c "test \"\$(readlink /usr/local/bin/hc)\" = herdr-core"
+check "hc --version" bash -c "hc --version | grep -qE '^hc [0-9]+\.[0-9]+\.[0-9]+'"
+check "hc --help runs" bash -c "hc --help | grep -q 'hc'"
+check "herdr-core agent skill installed" bash -c "test -f '${CORE_SKILL}'"
+check "herdr-core agent skill is owned by the remote user" bash -c "test -O '${CORE_SKILL}'"
+check "herdr-core agent skill has its frontmatter" bash -c "head -3 '${CORE_SKILL}' | grep -qx 'name: herdr-core'"
+# The core runs terminals that outlive the caller: prove a real round trip.
+check "hc runs a program and returns its output" bash -c "
+    export XDG_STATE_HOME=\$(mktemp -d) XDG_RUNTIME_DIR=\$(mktemp -d)
+    out=\$(timeout 60 hc run echo herdr-core-ok)
+    hc server stop >/dev/null 2>&1 || true
+    printf '%s' \"\$out\" | grep -q herdr-core-ok"
+
 # Report results
 # If any of the checks above exited with a non-zero exit code, the test will fail.
 reportResults

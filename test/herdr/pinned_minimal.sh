@@ -23,4 +23,7 @@ check "no agent skill written" bash -c "! test -e '${HOME}/.claude/skills/herdr/
 check "no bash completion written" bash -c "! test -e /usr/share/bash-completion/completions/herdr"
 check "no zsh completion written" bash -c "! test -e /usr/local/share/zsh/site-functions/_herdr"
 
+# installCore: false
+check "no herdr-core installed" bash -c "! test -e /usr/local/bin/herdr-core && ! test -e /usr/local/bin/hc"
+
 reportResults
