@@ -4,6 +4,7 @@
 set -e
 
 # variables provided by devcontainer-feature (option names are uppercased)
+INSTALL_TUI="${INSTALLTUI:-"true"}"
 HERDR_VERSION="${VERSION:-"latest"}"
 CONFIGURE_DEFAULTS="${CONFIGUREDEFAULTS:-"true"}"
 INSTALL_SKILL="${INSTALLSKILL:-"true"}"
@@ -30,6 +31,13 @@ ZSH_COMPLETION_DIR="/usr/local/share/zsh/site-functions"
 CORE_RELEASES_URL="https://releases.herdr.dev/core"
 
 APT_UPDATED="false"
+
+# Both products are optional, but a Feature that installs nothing is a
+# misconfiguration - fail the build instead of passing silently.
+if [ "${INSTALL_TUI}" != "true" ] && [ "${INSTALL_CORE}" != "true" ]; then
+    echo "ERROR: 'installTui' and 'installCore' are both false - nothing to install."
+    exit 1
+fi
 
 # Install packages via apt, running 'apt-get update' at most once. Package
 # lists are cleaned up at the end of the script, but only if we touched apt.
@@ -68,6 +76,10 @@ case "$(uname -m)" in
 esac
 TARGET="linux-${ARCH}"
 
+# One scratch directory for every download, removed however the script ends.
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "${tmpdir}"' EXIT
+
 # Accept both '0.8.2' and 'v0.8.2' for the pinned case.
 HERDR_VERSION="${HERDR_VERSION#v}"
 
@@ -86,138 +98,138 @@ if [ "${INSTALL_CORE}" = "true" ]; then
     fi
 fi
 
-# Pull the release manifest once: it resolves 'latest' AND carries the
-# per-target SHA-256 checksums used to verify the download below. Missing it
-# is not fatal - the fallbacks further down cover both jobs.
-MANIFEST_FILE="$(mktemp)"
-MANIFEST_OK="true"
-trap 'rm -f "${MANIFEST_FILE}"' EXIT
-if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 30 "${MANIFEST_URL}" -o "${MANIFEST_FILE}"; then
-    echo "WARNING: could not fetch the herdr release manifest from ${MANIFEST_URL}."
-    MANIFEST_OK="false"
-    : > "${MANIFEST_FILE}"
-fi
+# --- herdr TUI -----------------------------------------------------------------
 
-# Read the manifest's top-level "version", which names its newest release.
-manifest_version() {
-    awk '
-        /^[[:space:]]*"version"[[:space:]]*:/ {
-            value = $0
-            sub(/^[^:]*:[[:space:]]*"/, "", value)
-            sub(/".*$/, "", value)
-            print value
-            exit
-        }
-    ' "${MANIFEST_FILE}"
-}
+if [ "${INSTALL_TUI}" = "true" ]; then
+    # Pull the release manifest once: it resolves 'latest' AND carries the
+    # per-target SHA-256 checksums used to verify the download below. Missing it
+    # is not fatal - the fallbacks further down cover both jobs.
+    MANIFEST_FILE="${tmpdir}/herdr-manifest.json"
+    MANIFEST_OK="true"
+    if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 30 "${MANIFEST_URL}" -o "${MANIFEST_FILE}"; then
+        echo "WARNING: could not fetch the herdr release manifest from ${MANIFEST_URL}."
+        MANIFEST_OK="false"
+        : > "${MANIFEST_FILE}"
+    fi
 
-# Read the SHA-256 for a version/target pair out of the manifest. The manifest
-# mirrors its newest release at the top level and lists every release under
-# "releases"; both layouts are handled. Prints nothing when that version
-# publishes no checksum - upstream only started doing so with 0.8.0.
-manifest_sha256() {
-    awk -v want_version="$1" -v want_target="$2" '
-        # "notes" values are single-line markdown blobs that may contain any
-        # character, braces included. Drop them before tracking JSON structure
-        # so the brace counting below only ever sees structural braces.
-        /^[[:space:]]*"notes"[[:space:]]*:/ { next }
-
-        {
-            line = $0
-            # Remember which key opens this object, then track nesting depth.
-            key = ""
-            if (match(line, /^[[:space:]]*"[^"]+"[[:space:]]*:[[:space:]]*\{[[:space:]]*$/)) {
-                key = line
-                sub(/^[[:space:]]*"/, "", key)
-                sub(/"[[:space:]]*:.*$/, "", key)
+    # Read the manifest's top-level "version", which names its newest release.
+    manifest_version() {
+        awk '
+            /^[[:space:]]*"version"[[:space:]]*:/ {
+                value = $0
+                sub(/^[^:]*:[[:space:]]*"/, "", value)
+                sub(/".*$/, "", value)
+                print value
+                exit
             }
+        ' "${MANIFEST_FILE}"
+    }
 
-            n_open = gsub(/\{/, "{", line)
-            n_close = gsub(/\}/, "}", line)
+    # Read the SHA-256 for a version/target pair out of the manifest. The manifest
+    # mirrors its newest release at the top level and lists every release under
+    # "releases"; both layouts are handled. Prints nothing when that version
+    # publishes no checksum - upstream only started doing so with 0.8.0.
+    manifest_sha256() {
+        awk -v want_version="$1" -v want_target="$2" '
+            # "notes" values are single-line markdown blobs that may contain any
+            # character, braces included. Drop them before tracking JSON structure
+            # so the brace counting below only ever sees structural braces.
+            /^[[:space:]]*"notes"[[:space:]]*:/ { next }
 
-            if (n_open > n_close) { depth++; path[depth] = key }
-
-            if (n_open == 0 && n_close == 0) {
-                # The top-level checksums describe the top-level "version"
-                # only, so record which release that is before trusting them.
-                if (path[depth] == "" && $0 ~ /^[[:space:]]*"version"[[:space:]]*:/) {
-                    manifest_version = $0
-                    sub(/^[^:]*:[[:space:]]*"/, "", manifest_version)
-                    sub(/".*$/, "", manifest_version)
+            {
+                line = $0
+                # Remember which key opens this object, then track nesting depth.
+                key = ""
+                if (match(line, /^[[:space:]]*"[^"]+"[[:space:]]*:[[:space:]]*\{[[:space:]]*$/)) {
+                    key = line
+                    sub(/^[[:space:]]*"/, "", key)
+                    sub(/"[[:space:]]*:.*$/, "", key)
                 }
-                if (path[depth] == "sha256") {
-                    top_level = (path[depth - 1] == "" && manifest_version == want_version)
-                    per_release = (path[depth - 2] == "releases" && path[depth - 1] == want_version)
-                    if ((top_level || per_release) && index($0, "\"" want_target "\"")) {
-                        value = $0
-                        sub(/^[^:]*:[[:space:]]*"/, "", value)
-                        sub(/".*$/, "", value)
-                        if (value ~ /^[0-9a-fA-F]{64}$/) { print tolower(value); exit }
+
+                n_open = gsub(/\{/, "{", line)
+                n_close = gsub(/\}/, "}", line)
+
+                if (n_open > n_close) { depth++; path[depth] = key }
+
+                if (n_open == 0 && n_close == 0) {
+                    # The top-level checksums describe the top-level "version"
+                    # only, so record which release that is before trusting them.
+                    if (path[depth] == "" && $0 ~ /^[[:space:]]*"version"[[:space:]]*:/) {
+                        manifest_version = $0
+                        sub(/^[^:]*:[[:space:]]*"/, "", manifest_version)
+                        sub(/".*$/, "", manifest_version)
+                    }
+                    if (path[depth] == "sha256") {
+                        top_level = (path[depth - 1] == "" && manifest_version == want_version)
+                        per_release = (path[depth - 2] == "releases" && path[depth - 1] == want_version)
+                        if ((top_level || per_release) && index($0, "\"" want_target "\"")) {
+                            value = $0
+                            sub(/^[^:]*:[[:space:]]*"/, "", value)
+                            sub(/".*$/, "", value)
+                            if (value ~ /^[0-9a-fA-F]{64}$/) { print tolower(value); exit }
+                        }
                     }
                 }
+
+                if (n_close > n_open) { path[depth] = ""; depth-- }
             }
+        ' "${MANIFEST_FILE}"
+    }
 
-            if (n_close > n_open) { path[depth] = ""; depth-- }
-        }
-    ' "${MANIFEST_FILE}"
-}
-
-if [ "${HERDR_VERSION}" = "latest" ]; then
-    resolved="$(manifest_version || true)"
-    if [ -z "${resolved}" ]; then
-        # Fallback: the releases/latest page redirects to .../tag/v<X.Y.Z>, so
-        # the tag shows up in curl's effective URL. Preferred over the GitHub
-        # REST API, whose unauthenticated 60 req/h per-IP limit is easy to hit
-        # on shared CI runners.
-        echo "Falling back to the GitHub releases/latest redirect to resolve the newest release..."
-        resolved="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "${RELEASES_REPO}/releases/latest" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+$' || true)"
-        resolved="${resolved#v}"
+    if [ "${HERDR_VERSION}" = "latest" ]; then
+        resolved="$(manifest_version || true)"
+        if [ -z "${resolved}" ]; then
+            # Fallback: the releases/latest page redirects to .../tag/v<X.Y.Z>, so
+            # the tag shows up in curl's effective URL. Preferred over the GitHub
+            # REST API, whose unauthenticated 60 req/h per-IP limit is easy to hit
+            # on shared CI runners.
+            echo "Falling back to the GitHub releases/latest redirect to resolve the newest release..."
+            resolved="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "${RELEASES_REPO}/releases/latest" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+$' || true)"
+            resolved="${resolved#v}"
+        fi
+        if [ -z "${resolved}" ]; then
+            echo "ERROR: could not resolve the latest herdr release. Pin an exact version via the 'version' option instead."
+            exit 1
+        fi
+        HERDR_VERSION="${resolved}"
     fi
-    if [ -z "${resolved}" ]; then
-        echo "ERROR: could not resolve the latest herdr release. Pin an exact version via the 'version' option instead."
+
+    echo "Installing herdr ${HERDR_VERSION} (${TARGET})..."
+
+    # The Linux release asset is a bare executable, not an archive.
+    ASSET_URL="${RELEASES_REPO}/releases/download/v${HERDR_VERSION}/herdr-${TARGET}"
+    if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 300 -o "${tmpdir}/herdr" "${ASSET_URL}"; then
+        echo "ERROR: could not download ${ASSET_URL}."
+        echo "       Check that herdr ${HERDR_VERSION} exists and publishes a ${TARGET} asset:"
+        echo "       ${RELEASES_REPO}/releases"
         exit 1
     fi
-    HERDR_VERSION="${resolved}"
-fi
 
-echo "Installing herdr ${HERDR_VERSION} (${TARGET})..."
-
-tmpdir="$(mktemp -d)"
-trap 'rm -rf "${tmpdir}"; rm -f "${MANIFEST_FILE}"' EXIT
-
-# The Linux release asset is a bare executable, not an archive.
-ASSET_URL="${RELEASES_REPO}/releases/download/v${HERDR_VERSION}/herdr-${TARGET}"
-if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 300 -o "${tmpdir}/herdr" "${ASSET_URL}"; then
-    echo "ERROR: could not download ${ASSET_URL}."
-    echo "       Check that herdr ${HERDR_VERSION} exists and publishes a ${TARGET} asset:"
-    echo "       ${RELEASES_REPO}/releases"
-    exit 1
-fi
-
-# Verify the download against upstream's published checksum. Releases before
-# 0.8.0 publish none, so a pinned older version installs unverified rather
-# than failing the build - the option would otherwise be unusable.
-EXPECTED_SHA256="$(manifest_sha256 "${HERDR_VERSION}" "${TARGET}" || true)"
-if [ -n "${EXPECTED_SHA256}" ]; then
-    ACTUAL_SHA256="$(sha256sum < "${tmpdir}/herdr" | awk '{ print $1 }')"
-    if [ "${ACTUAL_SHA256}" != "${EXPECTED_SHA256}" ]; then
-        echo "ERROR: checksum mismatch for herdr-${TARGET} v${HERDR_VERSION}."
-        echo "       expected ${EXPECTED_SHA256}"
-        echo "       actual   ${ACTUAL_SHA256}"
-        exit 1
+    # Verify the download against upstream's published checksum. Releases before
+    # 0.8.0 publish none, so a pinned older version installs unverified rather
+    # than failing the build - the option would otherwise be unusable.
+    EXPECTED_SHA256="$(manifest_sha256 "${HERDR_VERSION}" "${TARGET}" || true)"
+    if [ -n "${EXPECTED_SHA256}" ]; then
+        ACTUAL_SHA256="$(sha256sum < "${tmpdir}/herdr" | awk '{ print $1 }')"
+        if [ "${ACTUAL_SHA256}" != "${EXPECTED_SHA256}" ]; then
+            echo "ERROR: checksum mismatch for herdr-${TARGET} v${HERDR_VERSION}."
+            echo "       expected ${EXPECTED_SHA256}"
+            echo "       actual   ${ACTUAL_SHA256}"
+            exit 1
+        fi
+        echo "Verified SHA-256 ${EXPECTED_SHA256}."
+    elif [ "${MANIFEST_OK}" != "true" ]; then
+        # Do not claim upstream publishes no checksum when we simply could not read
+        # the manifest - the two cases need different answers from whoever reads
+        # this log.
+        echo "WARNING: the release manifest was unreachable, so herdr ${HERDR_VERSION} (${TARGET}) could NOT be checksum-verified."
+        echo "         This is a network failure, not a missing upstream checksum. Re-run the build to verify."
+    else
+        echo "WARNING: upstream publishes no SHA-256 for herdr ${HERDR_VERSION} (${TARGET}) - installing unverified."
     fi
-    echo "Verified SHA-256 ${EXPECTED_SHA256}."
-elif [ "${MANIFEST_OK}" != "true" ]; then
-    # Do not claim upstream publishes no checksum when we simply could not read
-    # the manifest - the two cases need different answers from whoever reads
-    # this log.
-    echo "WARNING: the release manifest was unreachable, so herdr ${HERDR_VERSION} (${TARGET}) could NOT be checksum-verified."
-    echo "         This is a network failure, not a missing upstream checksum. Re-run the build to verify."
-else
-    echo "WARNING: upstream publishes no SHA-256 for herdr ${HERDR_VERSION} (${TARGET}) - installing unverified."
-fi
 
-install -m 0755 "${tmpdir}/herdr" "${INSTALL_DIR}/herdr"
+    install -m 0755 "${tmpdir}/herdr" "${INSTALL_DIR}/herdr"
+fi
 
 # --- remote user configuration ---------------------------------------------
 
@@ -234,7 +246,7 @@ TARGET_GROUP="$(id -gn "${TARGET_USER}" 2>/dev/null || echo "${TARGET_USER}")"
 CONFIG_DIR="${TARGET_USER_HOME}/.config/herdr"
 CONFIG_FILE="${CONFIG_DIR}/config.toml"
 
-if [ "${CONFIGURE_DEFAULTS}" = "true" ]; then
+if [ "${INSTALL_TUI}" = "true" ] && [ "${CONFIGURE_DEFAULTS}" = "true" ]; then
     if [ -e "${CONFIG_FILE}" ]; then
         echo "Leaving the existing ${CONFIG_FILE} untouched."
     else
@@ -280,7 +292,7 @@ fi
 
 # --- agent skill ------------------------------------------------------------
 
-if [ "${INSTALL_SKILL}" = "true" ]; then
+if [ "${INSTALL_TUI}" = "true" ] && [ "${INSTALL_SKILL}" = "true" ]; then
     SKILL_DIR="${TARGET_USER_HOME}/.claude/skills/herdr"
     # 'herdr --skill' prints the copy bundled with THIS binary, so the skill
     # always documents the CLI that is actually installed.
@@ -297,7 +309,7 @@ fi
 
 # --- shell completions ------------------------------------------------------
 
-if [ "${INSTALL_COMPLETIONS}" = "true" ]; then
+if [ "${INSTALL_TUI}" = "true" ] && [ "${INSTALL_COMPLETIONS}" = "true" ]; then
     # 'herdr completion' only exists from 0.7.1 onwards. Generate into the temp
     # directory first: an older pinned version must warn and carry on rather
     # than fail the build, and a failed run must not truncate a completion file
@@ -415,9 +427,11 @@ if [ "${APT_UPDATED}" = "true" ]; then
     rm -rf /var/lib/apt/lists/*
 fi
 
-"${INSTALL_DIR}/herdr" --version
-
-echo "Done! herdr ${HERDR_VERSION} installed as '${INSTALL_DIR}/herdr' for remote user '${TARGET_USER}'."
+echo "Done! For remote user '${TARGET_USER}':"
+if [ "${INSTALL_TUI}" = "true" ]; then
+    "${INSTALL_DIR}/herdr" --version
+    echo "      herdr ${HERDR_VERSION} installed as '${INSTALL_DIR}/herdr'."
+fi
 if [ "${INSTALL_CORE}" = "true" ]; then
     echo "      herdr-core ${CORE_RESOLVED} installed as '${INSTALL_DIR}/herdr-core'."
 fi

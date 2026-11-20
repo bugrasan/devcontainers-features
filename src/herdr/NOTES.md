@@ -62,6 +62,17 @@ Both are picked up without editing any shell rc file: `bash-completion` lazy-loa
 
 `herdr completion` was added in 0.7.1. Pinning an older release warns and skips the completions rather than failing the build.
 
+## Choosing what to install
+
+The Feature installs two upstream products, each behind its own switch:
+
+| Option | Default | Installs |
+|--------|---------|----------|
+| `installTui` | `true` | the herdr TUI, the terminal app run as `herdr`, with its config, agent skill, and completions |
+| `installCore` | `true` | herdr-core, the headless core run as `hc` |
+
+Turning both off fails the build: a Feature that installs nothing is a misconfiguration. With `installTui: false`, the TUI-only options (`version`, `configureDefaults`, `installCompletions`, and herdr's own skill) do nothing.
+
 ## herdr-core (`hc`)
 
 With `installCore` (default `true`) the Feature also installs [herdr-core](https://github.com/herdrdev/herdr-core), the headless core whose CLI is `hc`. It runs programs and coding agents in terminals that stay alive after the viewer leaves, and lets agents start, message, and wait on other agents. It draws no UI; herdr is the separate TUI.

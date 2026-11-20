@@ -55,5 +55,13 @@
                 "installSkill": false
             }
         }
+    },
+    "core_only": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "herdr": {
+                "installTui": false
+            }
+        }
     }
 }

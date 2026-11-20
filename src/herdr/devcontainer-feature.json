@@ -3,10 +3,15 @@
     "name": "herdr",
     "id": "herdr",
     "version": "1.1.0",
-    "description": "Installs herdr, the terminal multiplexer coding agents run on, from its official GitHub release. Seeds a container-friendly config for the remote user, installs herdr's agent skill for Claude Code, and adds bash/zsh shell completions. Also installs herdr-core ('hc'), herdr's headless terminal and agent core, from releases.herdr.dev.",
+    "description": "Installs the herdr TUI, the terminal multiplexer coding agents run on, from its official GitHub release (optional, on by default). Seeds a container-friendly config for the remote user, installs herdr's agent skill for Claude Code, and adds bash/zsh shell completions. Also installs herdr-core ('hc'), herdr's headless terminal and agent core, from releases.herdr.dev.",
     "documentationURL": "https://github.com/herdrdev/herdr",
     "keywords": ["herdr", "herdr-core", "hc", "terminal", "multiplexer", "tui", "coding-agents", "cli"],
     "options": {
+        "installTui": {
+            "type": "boolean",
+            "default": true,
+            "description": "Install the herdr TUI, the terminal app run as 'herdr' (/usr/local/bin/herdr). Set to false to install herdr-core only; 'version', 'configureDefaults', 'installCompletions' and herdr's own agent skill then do nothing. 'installTui' and 'installCore' cannot both be false."
+        },
         "version": {
             "type": "string",
             "default": "latest",
@@ -14,7 +19,7 @@
                 "latest",
                 "0.8.2",
             ],
-            "description": "herdr release to install: 'latest' (resolved at build time from upstream's release manifest) or an exact version like '0.8.2' (a leading 'v' is accepted too). See https://github.com/herdrdev/herdr/releases."
+            "description": "herdr TUI release to install when 'installTui' is true: 'latest' (resolved at build time from upstream's release manifest) or an exact version like '0.8.2' (a leading 'v' is accepted too). See https://github.com/herdrdev/herdr/releases."
         },
         "configureDefaults": {
             "type": "boolean",
