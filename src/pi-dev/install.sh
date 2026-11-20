@@ -30,7 +30,8 @@ NODE_BIN_DIR="${NVM_DIR}/current/bin"
 # stdin) against a clean runner:
 # https://github.com/bugrasan/devcontainer-base-ai/actions/runs/29093012572
 # It installs per user (into ~/.pi/agent), so it must run as the container's
-# remote user, not root.
-su "${TARGET_USER}" -c "export PATH='${NODE_BIN_DIR}:${PATH}'; curl -fsSL https://pi.dev/install.sh | sh"
+# remote user, not root. pipefail makes a failed download fail the build; it
+# needs bash, since the user's login shell may be dash.
+su -s /bin/bash "${TARGET_USER}" -c "set -o pipefail; export PATH='${NODE_BIN_DIR}:${PATH}'; curl -fsSL https://pi.dev/install.sh | sh"
 
 echo 'Done!'

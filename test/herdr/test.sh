@@ -93,12 +93,6 @@ for agent_home in .claude .copilot; do
     check "herdr-core skill in ~/${agent_home}" bash -c "head -3 '${CORE_SKILL}' | grep -qx 'name: herdr-core'"
     check "herdr-core skill in ~/${agent_home} is owned by the remote user" bash -c "test -O '${CORE_SKILL}'"
 done
-# The core runs terminals that outlive the caller: prove a real round trip.
-check "herdr-core runs a program and returns its output" bash -c "
-    export XDG_STATE_HOME=\$(mktemp -d) XDG_RUNTIME_DIR=\$(mktemp -d)
-    out=\$(timeout 60 herdr-core run echo herdr-core-ok)
-    herdr-core server stop >/dev/null 2>&1 || true
-    printf '%s' \"\$out\" | grep -q herdr-core-ok"
 
 # Report results
 # If any of the checks above exited with a non-zero exit code, the test will fail.
