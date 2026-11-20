@@ -82,7 +82,7 @@ check "bash completion sources and registers herdr" bash -c "
     complete -p herdr >/dev/null"
 check "zsh completion is a compdef for herdr" bash -c "head -1 '${ZSH_COMPLETION}' | grep -qx '#compdef herdr'"
 
-# installCore defaults to true: herdr-core with its 'hc' link.
+# installCore defaults to true: herdr-core.
 check "herdr-core installed at ~/.local/bin/herdr-core" bash -c "test -x '${HOME}/.local/bin/herdr-core'"
 check "herdr-core --version" bash -c "herdr-core --version | grep -qE '^hc [0-9]+\.[0-9]+\.[0-9]+'"
 
