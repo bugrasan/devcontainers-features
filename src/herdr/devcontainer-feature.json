@@ -39,7 +39,7 @@
         "installCore": {
             "type": "boolean",
             "default": true,
-            "description": "Also install herdr-core, the headless core whose CLI is 'hc': it runs programs and coding agents in terminals that outlive the viewer, and lets agents start, message and wait on other agents. Installed as /usr/local/bin/herdr-core with an 'hc' symlink (only when no other 'hc' exists). Downloaded from releases.herdr.dev - upstream publishes no GitHub release assets for it - and verified against that manifest's SHA-256. With 'installSkill', upstream's herdr-core agent skill (from the matching release tag on GitHub) goes to ~/.claude/skills/herdr-core/SKILL.md."
+            "description": "Also install herdr-core, the headless core whose CLI is 'hc': it runs programs and coding agents in terminals that outlive the viewer, and lets agents start, message and wait on other agents. Installed as /usr/local/bin/herdr-core with an 'hc' symlink (only when no other 'hc' exists). Downloaded from releases.herdr.dev - upstream publishes no GitHub release assets for it - and verified against that manifest's SHA-256. With 'installSkill', upstream's herdr-core agent skill (from the matching release tag on GitHub) goes to ~/.claude/skills/herdr-core/SKILL.md. 'installTui' and 'installCore' cannot both be false."
         },
         "coreVersion": {
             "type": "string",

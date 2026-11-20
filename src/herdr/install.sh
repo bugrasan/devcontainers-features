@@ -427,9 +427,11 @@ if [ "${APT_UPDATED}" = "true" ]; then
     rm -rf /var/lib/apt/lists/*
 fi
 
-echo "Done! For remote user '${TARGET_USER}':"
 if [ "${INSTALL_TUI}" = "true" ]; then
     "${INSTALL_DIR}/herdr" --version
+fi
+echo "Done! For remote user '${TARGET_USER}':"
+if [ "${INSTALL_TUI}" = "true" ]; then
     echo "      herdr ${HERDR_VERSION} installed as '${INSTALL_DIR}/herdr'."
 fi
 if [ "${INSTALL_CORE}" = "true" ]; then
