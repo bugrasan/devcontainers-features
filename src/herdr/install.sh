@@ -70,6 +70,11 @@ if [ -z "${TARGET_USER_HOME}" ]; then
     TARGET_USER_HOME="$([ "${TARGET_USER}" = "root" ] && echo /root || echo "/home/${TARGET_USER}")"
 fi
 TARGET_GROUP="$(id -gn "${TARGET_USER}" 2>/dev/null || echo "${TARGET_USER}")"
+# The per-user steps below need a home the remote user owns.
+if [ ! -d "${TARGET_USER_HOME}" ]; then
+    mkdir -p "${TARGET_USER_HOME}"
+    chown "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}" 2>/dev/null || true
+fi
 
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "${tmpdir}"' EXIT
@@ -89,6 +94,9 @@ fetch() {
 SKILL_HOMES=()
 if [ "${SKILL_CLAUDE_CODE}" = "true" ]; then SKILL_HOMES+=(.claude); fi
 if [ "${SKILL_COPILOT}" = "true" ]; then SKILL_HOMES+=(.copilot); fi
+if [ "${#SKILL_HOMES[@]}" -eq 0 ]; then
+    echo "NOTE: 'skillClaudeCode' and 'skillCopilot' are both false - no agent skill is installed."
+fi
 
 # Install one SKILL.md as skill <name> for every enabled harness.
 install_skill() {
@@ -168,7 +176,7 @@ EOF
         echo "Installed bash and zsh completions."
     fi
 
-    if [ "${INSTALL_TUI_SKILL}" = "true" ]; then
+    if [ "${INSTALL_TUI_SKILL}" = "true" ] && [ "${#SKILL_HOMES[@]}" -gt 0 ]; then
         # 'herdr --skill' prints the skill bundled with the installed binary.
         "${INSTALL_DIR}/herdr" --skill > "${tmpdir}/herdr-SKILL.md"
         install_skill herdr "${tmpdir}/herdr-SKILL.md"
@@ -186,13 +194,19 @@ if [ "${INSTALL_CORE}" = "true" ]; then
     fetch "${CORE_INSTALL_URL}" "${tmpdir}/herdr-core-install.sh"
     HC_VERSION="${CORE_VERSION}" HC_INSTALL_DIR="${INSTALL_DIR}" sh "${tmpdir}/herdr-core-install.sh"
 
-    if [ "${INSTALL_CORE_SKILL}" = "true" ]; then
-        # 'hc --skill' prints a manual without the frontmatter agents need,
-        # so take upstream's skill file from the installed version's tag; it
-        # tells the agent to read that manual from the binary.
-        installed="$("${INSTALL_DIR}/herdr-core" --version | awk '{ print $2 }')"
-        fetch "${CORE_SKILL_BASE_URL}/v${installed}/skills/herdr-core/SKILL.md" "${tmpdir}/herdr-core-SKILL.md"
-        install_skill herdr-core "${tmpdir}/herdr-core-SKILL.md"
+    if [ "${INSTALL_CORE_SKILL}" = "true" ] && [ "${#SKILL_HOMES[@]}" -gt 0 ]; then
+        if [ "$(readlink -f "$(command -v hc || true)")" != "${INSTALL_DIR}/herdr-core" ]; then
+            # The skill tells agents to run 'hc', which is another program here.
+            echo "WARNING: 'hc' is not herdr-core in this image - skipping the herdr-core agent skill."
+        else
+            # 'hc --skill' prints a manual without the frontmatter agents need,
+            # so take upstream's skill file from the installed version's tag
+            # (published from 0.1.13 on); it tells the agent to read that
+            # manual from the binary.
+            installed="$("${INSTALL_DIR}/herdr-core" --version | awk '{ print $2 }')"
+            fetch "${CORE_SKILL_BASE_URL}/v${installed}/skills/herdr-core/SKILL.md" "${tmpdir}/herdr-core-SKILL.md"
+            install_skill herdr-core "${tmpdir}/herdr-core-SKILL.md"
+        fi
     fi
 fi
 

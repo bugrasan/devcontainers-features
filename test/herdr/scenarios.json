@@ -22,8 +22,7 @@
         "image": "debian:latest",
         "features": {
             "herdr": {
-                "coreVersion": "v0.1.20",
-                "installCoreSkill": false
+                "coreVersion": "v0.1.20"
             }
         }
     },
@@ -32,9 +31,7 @@
             "dockerfile": "Dockerfile"
         },
         "features": {
-            "herdr": {
-                "installCoreSkill": false
-            }
+            "herdr": {}
         }
     },
     "core_only": {
@@ -52,6 +49,27 @@
             "herdr": {
                 "installTuiSkill": true,
                 "skillClaudeCode": false
+            }
+        }
+    },
+    "skills_tui_claude_only": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "remoteUser": "vscode",
+        "features": {
+            "herdr": {
+                "installTuiSkill": true,
+                "installCoreSkill": false,
+                "skillCopilot": false
+            }
+        }
+    },
+    "no_harness": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "features": {
+            "herdr": {
+                "installTuiSkill": true,
+                "skillClaudeCode": false,
+                "skillCopilot": false
             }
         }
     }

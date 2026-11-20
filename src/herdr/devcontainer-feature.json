@@ -39,12 +39,12 @@
                 "latest",
                 "0.1.21",
             ],
-            "description": "herdr-core release to install: 'latest', or an exact version like '0.1.21' (a leading 'v' is accepted too). Passed to upstream's script as HC_VERSION."
+            "description": "With 'installCore': herdr-core release to install, 'latest', or an exact version like '0.1.21' (a leading 'v' is accepted too). Passed to upstream's script as HC_VERSION."
         },
         "installCoreSkill": {
             "type": "boolean",
             "default": true,
-            "description": "With 'installCore': install upstream's herdr-core agent skill (from the installed version's tag on GitHub) for the agents chosen by 'skillClaudeCode' and 'skillCopilot'. Outside an hc terminal it tells the agent to ask the user once whether to use hc."
+            "description": "With 'installCore': install upstream's herdr-core agent skill (from the installed version's tag on GitHub) for the agents chosen by 'skillClaudeCode' and 'skillCopilot'. Outside an hc terminal it tells the agent to ask the user once whether to use hc. Upstream publishes the skill from herdr-core 0.1.13 on; an older 'coreVersion' fails the build unless this is false. Skipped with a warning when another program owns 'hc'."
         },
         "skillClaudeCode": {
             "type": "boolean",
@@ -62,10 +62,13 @@
     // installsAfter is used purely for build-cache ordering: this Feature
     // always installs the latest herdr TUI and changes more often
     // than the Features below. Docker's cache key chains sequentially, so
-    // installing last keeps the stable prefix cache-hit even when herdr
-    // gets a new release.
+    // installing last keeps the stable prefix cache-hit when this Feature
+    // changes. A cached layer never notices a new upstream release - rebuild
+    // without cache (--no-cache) to pick one up.
     "installsAfter": [
         "ghcr.io/devcontainers/features/common-utils",
+        "ghcr.io/devcontainers/features/copilot-cli",
+        "ghcr.io/bugrasan/devcontainers-features/claude-code",
         "ghcr.io/devcontainers/features/github-cli",
         "ghcr.io/devcontainers/features/node",
         "ghcr.io/devcontainers/features/python",

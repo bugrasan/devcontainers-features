@@ -10,11 +10,11 @@ The Feature runs upstream's official install scripts, unchanged:
 - Each script verifies its download against the SHA-256 in upstream's release manifest.
 - Both scripts default to `~/.local/bin`. The Feature sets `HERDR_INSTALL_DIR` and `HC_INSTALL_DIR` to `/usr/local/bin` instead, so both commands are on `PATH` for every user.
 - The scripts are downloaded to a file first and then run, so a failed download fails the build instead of running an empty script.
-- The Feature's own `install.sh` is `bash` and bootstraps what the scripts need (`curl`, `ca-certificates`, and, for herdr-core, `tar` and `gzip`) with `apt-get`. It targets Debian- and Ubuntu-family base images, like the other Features in this repository. It does not run on Alpine.
+- The Feature's own `install.sh` is `bash` and bootstraps what the scripts need (`curl`, `ca-certificates`, `coreutils`, and, for herdr-core, `tar` and `gzip`) with `apt-get`. It targets Debian- and Ubuntu-family base images, like the other Features in this repository. It does not run on Alpine.
 
 ### Versions
 
-- **herdr TUI:** upstream's script always installs the latest release. It cannot pin a version, so neither can this Feature. Rebuild the image to update.
+- **herdr TUI:** upstream's script always installs the latest release. It cannot pin a version, so neither can this Feature. A cached image layer never notices a new upstream release: rebuild without cache (`--no-cache`) to update.
 - **herdr-core:** upstream's script pins through `HC_VERSION`, which the `coreVersion` option sets. Use `latest` (the default) or an exact version such as `"0.1.21"` (`"v0.1.21"` works too).
 
 ### Network
@@ -25,6 +25,7 @@ The image build needs to reach:
 |------|----------|
 | `herdr.dev` | the herdr TUI script and its release manifest |
 | `github.com` | the herdr TUI binary (release assets) |
+| `release-assets.githubusercontent.com` | where `github.com` redirects those release downloads |
 | `releases.herdr.dev` | the herdr-core script, manifest, and archive |
 | `raw.githubusercontent.com` | the herdr-core agent skill |
 
@@ -35,7 +36,12 @@ The image build needs to reach:
 | `installTui` | `true` | the herdr TUI, with its config and completions |
 | `installCore` | `true` | herdr-core, with an `hc` link |
 
-Turning both off fails the build: a Feature that installs nothing is a misconfiguration. With `installTui: false`, the TUI-only options (`configureDefaults`, `installCompletions`, and `installTuiSkill`) do nothing.
+Turning both off fails the build: a Feature that installs nothing is a misconfiguration. With `installTui: false`, the TUI-only options (`configureDefaults`, `installCompletions`, and `installTuiSkill`) do nothing. With `installCore: false`, `coreVersion` and `installCoreSkill` do nothing.
+
+Apply the Feature once per image. If the image already has `/usr/local/bin/herdr-core`, for example a base image that already ran this Feature, upstream's herdr-core script takes its update path instead of a fresh install:
+
+- it starts a core as root during the build, and its state ends up in the image;
+- it refuses a `coreVersion` older than the installed one, which fails the build.
 
 ## Generated configuration
 
@@ -72,7 +78,14 @@ The two skills behave differently when the agent is not running inside their too
 - The `herdr` skill guards itself on `HERDR_ENV=1`. Outside a herdr pane the agent stops and says it is not running inside herdr, so the skill stays inert.
 - The `herdr-core` skill is **not** inert. It matches sub-agent and background-task work, and when `HC_TERMINAL_ID` is unset it tells the agent to ask the user once per session whether to use `hc`. It is a short pointer: it tells the agent to run `hc --skill`, which prints the full manual bundled with the installed binary.
 
-`hc --skill` itself prints that manual without the frontmatter agents need to load a skill, which is why the Feature installs upstream's skill file instead.
+Limits of the `herdr-core` skill:
+
+- `hc --skill` prints the manual without the frontmatter agents need to load a skill, which is why the Feature installs upstream's skill file instead.
+- Upstream publishes that file from herdr-core 0.1.13 on. With an older `coreVersion`, set `installCoreSkill: false`, or the build fails.
+- When another program already owns `hc`, the skill is skipped with a warning, since it tells agents to run `hc`.
+- The skill also points agents to `herdr-app --skill` for the Herdr window. This Feature does not install `herdr-app`.
+
+With `skillClaudeCode` and `skillCopilot` both false, no skill is installed, whatever `installTuiSkill` and `installCoreSkill` say.
 
 ## Shell completions
 
