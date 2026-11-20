@@ -16,6 +16,9 @@ set -e
 source dev-container-features-test-lib
 
 check "pi is on PATH" bash -c "command -v pi"
+# Upstream's managed install puts its launcher in ~/.pi/agent/bin; the Feature
+# links it into /usr/local/bin so every shell finds it.
+check "pi links to the managed launcher" bash -c "test \"\$(readlink /usr/local/bin/pi)\" = '${HOME}/.pi/agent/bin/pi'"
 check "pi --version" bash -c "pi --version"
 
 reportResults
