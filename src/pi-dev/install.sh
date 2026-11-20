@@ -12,9 +12,9 @@ TARGET_USER_HOME="${_REMOTE_USER_HOME:-$(getent passwd "${TARGET_USER}" | cut -d
 PI_INSTALL_URL="https://pi.dev/install.sh"
 INSTALL_DIR="/usr/local/bin"
 
-# pi.dev/install.sh hard-requires Node.js >=22.19.0 and npm. The node Feature's
-# containerEnv (its PATH) is not active while a sibling Feature's install.sh
-# runs, so put its stable 'current' bin directory on PATH explicitly:
+# pi.dev/install.sh hard-requires Node.js >=22.19.0 and npm. 'su' resets PATH
+# (pam_env), so pass the node Feature's stable 'current' bin directory and
+# root's PATH explicitly:
 # https://github.com/bugrasan/devcontainers-features/pull/13
 NVM_DIR="${NVM_DIR:-/usr/local/share/nvm}"
 NODE_BIN_DIR="${NVM_DIR}/current/bin"
@@ -27,13 +27,15 @@ curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 "${PI_INSTALL_URL}" -o "
 chmod 0755 "${tmpdir}" "${tmpdir}/install.sh"
 
 # A link left by an earlier run would make upstream's installer pick
-# /usr/local/bin for its launcher, which the remote user cannot write. Drop it;
-# it is recreated below.
-if [ -L "${INSTALL_DIR}/pi" ]; then rm -f "${INSTALL_DIR}/pi"; fi
+# /usr/local/bin for its launcher, which the remote user cannot write. Drop
+# only the Feature's own link; it is recreated below.
+case "$(readlink "${INSTALL_DIR}/pi" 2>/dev/null)" in
+    */.pi/agent/bin/pi) rm -f "${INSTALL_DIR}/pi" ;;
+esac
 
 # Pi installs per user, so run the installer as the remote user. Without a
 # terminal it proceeds with its default action instead of prompting.
-su "${TARGET_USER}" -c "export PATH='${NODE_BIN_DIR}:${PATH}'; sh '${tmpdir}/install.sh'"
+su -s /bin/sh "${TARGET_USER}" -c "export PATH='${NODE_BIN_DIR}:${PATH}'; sh '${tmpdir}/install.sh'"
 
 # Upstream's managed install puts its launcher in ~/.pi/agent/bin, which is not
 # on PATH. Link it into a system-wide bin directory; the launcher follows

@@ -7,5 +7,15 @@
             },
             "pi-dev": {}
         }
+    },
+    "as_root": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "remoteUser": "root",
+        "features": {
+            "ghcr.io/devcontainers/features/node:1": {
+                "version": "22"
+            },
+            "pi-dev": {}
+        }
     }
 }
