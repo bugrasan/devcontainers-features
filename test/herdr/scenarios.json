@@ -26,14 +26,6 @@
             }
         }
     },
-    "existing_hc": {
-        "build": {
-            "dockerfile": "Dockerfile"
-        },
-        "features": {
-            "herdr": {}
-        }
-    },
     "core_only": {
         "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
         "features": {
