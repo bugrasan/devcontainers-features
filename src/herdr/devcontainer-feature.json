@@ -2,15 +2,15 @@
     // https://containers.dev/implementors/features/
     "name": "herdr",
     "id": "herdr",
-    "version": "2.0.0",
-    "description": "Installs the herdr TUI ('herdr') and herdr-core ('hc') with upstream's official install scripts, both optional. Seeds a container-friendly herdr config, adds bash/zsh completions, and installs agent skills for Claude Code and GitHub Copilot CLI.",
+    "version": "3.0.0",
+    "description": "Installs the herdr TUI ('herdr') and herdr-core ('hc') by running upstream's official install scripts unchanged, both optional, into the remote user's ~/.local/bin. Seeds a container-friendly herdr config, adds bash/zsh completions, and installs agent skills for Claude Code and GitHub Copilot CLI.",
     "documentationURL": "https://github.com/herdrdev/herdr",
     "keywords": ["herdr", "herdr-core", "hc", "terminal", "multiplexer", "tui", "coding-agents", "cli"],
     "options": {
         "installTui": {
             "type": "boolean",
             "default": true,
-            "description": "Install the herdr TUI, the terminal app run as 'herdr', with upstream's official install script (https://herdr.dev/install.sh) into /usr/local/bin. That script always installs the latest release; it cannot pin a version. 'installTui' and 'installCore' cannot both be false."
+            "description": "Install the herdr TUI, the terminal app run as 'herdr', by running upstream's official install script (https://herdr.dev/install.sh) unchanged as the remote user. It installs to upstream's default ~/.local/bin/herdr, which may not be on PATH. The script always installs the latest release; it cannot pin a version."
         },
         "configureDefaults": {
             "type": "boolean",
@@ -30,7 +30,7 @@
         "installCore": {
             "type": "boolean",
             "default": true,
-            "description": "Install herdr-core, the headless core run as 'hc', with upstream's official install script (https://releases.herdr.dev/core/install.sh) into /usr/local/bin: 'herdr-core' plus an 'hc' link when no other 'hc' exists. 'installTui' and 'installCore' cannot both be false."
+            "description": "Install herdr-core, the headless core run as 'hc', by running upstream's official install script (https://releases.herdr.dev/core/install.sh) unchanged as the remote user. It installs to upstream's default ~/.local/bin: 'herdr-core' plus an 'hc' link when no other 'hc' exists. That directory may not be on PATH."
         },
         "coreVersion": {
             "type": "string",
@@ -44,7 +44,7 @@
         "installCoreSkill": {
             "type": "boolean",
             "default": true,
-            "description": "With 'installCore': install upstream's herdr-core agent skill (from the installed version's tag on GitHub) for the agents chosen by 'skillClaudeCode' and 'skillCopilot'. Outside an hc terminal it tells the agent to ask the user once whether to use hc. Upstream publishes the skill from herdr-core 0.1.13 on; an older 'coreVersion' fails the build unless this is false. Skipped with a warning when another program owns 'hc'."
+            "description": "With 'installCore': install upstream's herdr-core agent skill (from the installed version's tag on GitHub) for the agents chosen by 'skillClaudeCode' and 'skillCopilot'. Outside an hc terminal it tells the agent to ask the user once whether to use hc. Upstream publishes the skill from herdr-core 0.1.13 on; an older 'coreVersion' fails the build unless this is false."
         },
         "skillClaudeCode": {
             "type": "boolean",

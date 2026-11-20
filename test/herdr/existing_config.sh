@@ -6,6 +6,9 @@
 set -e
 source dev-container-features-test-lib
 
+# Upstream's scripts install to ~/.local/bin and leave PATH alone.
+export PATH="${HOME}/.local/bin:${PATH}"
+
 CONFIG="${HOME}/.config/herdr/config.toml"
 
 check "herdr installed" bash -c "herdr --version"

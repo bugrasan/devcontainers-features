@@ -6,6 +6,9 @@
 set -e
 source dev-container-features-test-lib
 
+# Upstream's scripts install to ~/.local/bin and leave PATH alone.
+export PATH="${HOME}/.local/bin:${PATH}"
+
 SKILL="${HOME}/.claude/skills/herdr/SKILL.md"
 check "herdr skill for Claude Code" bash -c "head -3 '${SKILL}' | grep -qx 'name: herdr'"
 check "herdr skill owned by the remote user" bash -c "test -O '${SKILL}'"
