@@ -1,21 +1,11 @@
 {
-    "pinned_minimal": {
+    "minimal": {
         "image": "debian:latest",
         "features": {
             "herdr": {
-                "version": "0.8.2",
                 "configureDefaults": false,
-                "installSkill": false,
                 "installCompletions": false,
                 "installCore": false
-            }
-        }
-    },
-    "leading_v_version": {
-        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-        "features": {
-            "herdr": {
-                "version": "v0.8.2"
             }
         }
     },
@@ -28,21 +18,12 @@
             "herdr": {}
         }
     },
-    "legacy_version": {
-        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-        "features": {
-            "herdr": {
-                "version": "0.7.0"
-            }
-        }
-    },
     "core_pinned": {
         "image": "debian:latest",
         "features": {
             "herdr": {
-                "version": "0.8.2",
                 "coreVersion": "v0.1.20",
-                "installSkill": false
+                "installCoreSkill": false
             }
         }
     },
@@ -52,7 +33,7 @@
         },
         "features": {
             "herdr": {
-                "installSkill": false
+                "installCoreSkill": false
             }
         }
     },
@@ -61,6 +42,16 @@
         "features": {
             "herdr": {
                 "installTui": false
+            }
+        }
+    },
+    "skills_copilot_only": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "remoteUser": "vscode",
+        "features": {
+            "herdr": {
+                "installTuiSkill": true,
+                "skillClaudeCode": false
             }
         }
     }

@@ -5,39 +5,36 @@ set -e
 
 # variables provided by devcontainer-feature (option names are uppercased)
 INSTALL_TUI="${INSTALLTUI:-"true"}"
-HERDR_VERSION="${VERSION:-"latest"}"
 CONFIGURE_DEFAULTS="${CONFIGUREDEFAULTS:-"true"}"
-INSTALL_SKILL="${INSTALLSKILL:-"true"}"
 INSTALL_COMPLETIONS="${INSTALLCOMPLETIONS:-"true"}"
+INSTALL_TUI_SKILL="${INSTALLTUISKILL:-"false"}"
 INSTALL_CORE="${INSTALLCORE:-"true"}"
 CORE_VERSION="${COREVERSION:-"latest"}"
+INSTALL_CORE_SKILL="${INSTALLCORESKILL:-"true"}"
+SKILL_CLAUDE_CODE="${SKILLCLAUDECODE:-"true"}"
+SKILL_COPILOT="${SKILLCOPILOT:-"true"}"
 
 # The 'install.sh' entrypoint script is always executed as the root user.
 # For more details, see https://containers.dev/implementors/features#user-env-var
 TARGET_USER="${_REMOTE_USER:-root}"
 TARGET_USER_HOME="${_REMOTE_USER_HOME:-}"
 
-RELEASES_REPO="https://github.com/herdrdev/herdr"
-# Upstream's release manifest - the same file herdr.dev serves as latest.json
-# and that 'herdr update' reads. Taken from raw.githubusercontent.com rather
-# than herdr.dev so installing herdr itself only needs to reach GitHub
-# (herdr-core is the exception: it needs releases.herdr.dev).
-MANIFEST_URL="https://raw.githubusercontent.com/herdrdev/herdr/master/distribution/latest.json"
+# Upstream's official install scripts, run unchanged. Both default to
+# $HOME/.local/bin; the Feature points them at a system-wide directory.
+TUI_INSTALL_URL="https://herdr.dev/install.sh"
+CORE_INSTALL_URL="https://releases.herdr.dev/core/install.sh"
+CORE_SKILL_BASE_URL="https://raw.githubusercontent.com/herdrdev/herdr-core"
 INSTALL_DIR="/usr/local/bin"
 BASH_COMPLETION_DIR="/usr/share/bash-completion/completions"
 ZSH_COMPLETION_DIR="/usr/local/share/zsh/site-functions"
-# herdr-core ships only through upstream's own release service, not as GitHub
-# release assets, so this is the one host outside GitHub the build needs.
-CORE_RELEASES_URL="https://releases.herdr.dev/core"
 
-APT_UPDATED="false"
-
-# Both products are optional, but a Feature that installs nothing is a
-# misconfiguration - fail the build instead of passing silently.
+# A Feature that installs nothing is a misconfiguration - fail the build.
 if [ "${INSTALL_TUI}" != "true" ] && [ "${INSTALL_CORE}" != "true" ]; then
     echo "ERROR: 'installTui' and 'installCore' are both false - nothing to install."
     exit 1
 fi
+
+APT_UPDATED="false"
 
 # Install packages via apt, running 'apt-get update' at most once. Package
 # lists are cleaned up at the end of the script, but only if we touched apt.
@@ -50,12 +47,12 @@ apt_install() {
     apt-get -y install --no-install-recommends "$@"
 }
 
-# Ensure curl and a SHA-256 tool exist - minimal base images (debian:latest,
-# ubuntu:latest) ship neither, unlike mcr.microsoft.com/devcontainers/base.
+# Bootstrap what upstream's scripts need - minimal base images (debian:latest,
+# ubuntu:latest) lack curl, unlike mcr.microsoft.com/devcontainers/base. The
+# herdr-core script also unpacks a .tar.gz archive.
 MISSING_TOOLS=()
 command -v curl >/dev/null 2>&1 || MISSING_TOOLS+=(ca-certificates curl)
 command -v sha256sum >/dev/null 2>&1 || MISSING_TOOLS+=(coreutils)
-# herdr-core is released as a .tar.gz archive, unlike herdr's bare binary.
 if [ "${INSTALL_CORE}" = "true" ]; then
     command -v tar >/dev/null 2>&1 || MISSING_TOOLS+=(tar)
     command -v gzip >/dev/null 2>&1 || MISSING_TOOLS+=(gzip)
@@ -63,175 +60,6 @@ fi
 if [ "${#MISSING_TOOLS[@]}" -gt 0 ]; then
     apt_install "${MISSING_TOOLS[@]}"
 fi
-
-# Map machine architecture to upstream's release asset naming
-# (herdr-linux-<arch>). Upstream publishes linux x86_64 and aarch64 only.
-case "$(uname -m)" in
-    x86_64 | amd64) ARCH="x86_64" ;;
-    aarch64 | arm64) ARCH="aarch64" ;;
-    *)
-        echo "ERROR: unsupported architecture '$(uname -m)' - herdr publishes linux x86_64 and aarch64 binaries only."
-        exit 1
-        ;;
-esac
-TARGET="linux-${ARCH}"
-
-# One scratch directory for every download, removed however the script ends.
-tmpdir="$(mktemp -d)"
-trap 'rm -rf "${tmpdir}"' EXIT
-
-# Accept both '0.8.2' and 'v0.8.2' for the pinned case.
-HERDR_VERSION="${HERDR_VERSION#v}"
-
-# Validate herdr-core's version up front, so a typo fails before any download.
-# Accept both '0.1.21' and 'v0.1.21'; reject anything else before it ends up
-# in a URL.
-if [ "${INSTALL_CORE}" = "true" ]; then
-    CORE_VERSION="${CORE_VERSION#v}"
-    if [ "${CORE_VERSION}" = "latest" ]; then
-        CORE_MANIFEST_URL="${CORE_RELEASES_URL}/latest.json"
-    elif printf '%s' "${CORE_VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-        CORE_MANIFEST_URL="${CORE_RELEASES_URL}/${CORE_VERSION}/manifest.json"
-    else
-        echo "ERROR: invalid 'coreVersion' '${CORE_VERSION}' - use 'latest' or an exact version like '0.1.21'."
-        exit 1
-    fi
-fi
-
-# --- herdr TUI -----------------------------------------------------------------
-
-if [ "${INSTALL_TUI}" = "true" ]; then
-    # Pull the release manifest once: it resolves 'latest' AND carries the
-    # per-target SHA-256 checksums used to verify the download below. Missing it
-    # is not fatal - the fallbacks further down cover both jobs.
-    MANIFEST_FILE="${tmpdir}/herdr-manifest.json"
-    MANIFEST_OK="true"
-    if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 30 "${MANIFEST_URL}" -o "${MANIFEST_FILE}"; then
-        echo "WARNING: could not fetch the herdr release manifest from ${MANIFEST_URL}."
-        MANIFEST_OK="false"
-        : > "${MANIFEST_FILE}"
-    fi
-
-    # Read the manifest's top-level "version", which names its newest release.
-    manifest_version() {
-        awk '
-            /^[[:space:]]*"version"[[:space:]]*:/ {
-                value = $0
-                sub(/^[^:]*:[[:space:]]*"/, "", value)
-                sub(/".*$/, "", value)
-                print value
-                exit
-            }
-        ' "${MANIFEST_FILE}"
-    }
-
-    # Read the SHA-256 for a version/target pair out of the manifest. The manifest
-    # mirrors its newest release at the top level and lists every release under
-    # "releases"; both layouts are handled. Prints nothing when that version
-    # publishes no checksum - upstream only started doing so with 0.8.0.
-    manifest_sha256() {
-        awk -v want_version="$1" -v want_target="$2" '
-            # "notes" values are single-line markdown blobs that may contain any
-            # character, braces included. Drop them before tracking JSON structure
-            # so the brace counting below only ever sees structural braces.
-            /^[[:space:]]*"notes"[[:space:]]*:/ { next }
-
-            {
-                line = $0
-                # Remember which key opens this object, then track nesting depth.
-                key = ""
-                if (match(line, /^[[:space:]]*"[^"]+"[[:space:]]*:[[:space:]]*\{[[:space:]]*$/)) {
-                    key = line
-                    sub(/^[[:space:]]*"/, "", key)
-                    sub(/"[[:space:]]*:.*$/, "", key)
-                }
-
-                n_open = gsub(/\{/, "{", line)
-                n_close = gsub(/\}/, "}", line)
-
-                if (n_open > n_close) { depth++; path[depth] = key }
-
-                if (n_open == 0 && n_close == 0) {
-                    # The top-level checksums describe the top-level "version"
-                    # only, so record which release that is before trusting them.
-                    if (path[depth] == "" && $0 ~ /^[[:space:]]*"version"[[:space:]]*:/) {
-                        manifest_version = $0
-                        sub(/^[^:]*:[[:space:]]*"/, "", manifest_version)
-                        sub(/".*$/, "", manifest_version)
-                    }
-                    if (path[depth] == "sha256") {
-                        top_level = (path[depth - 1] == "" && manifest_version == want_version)
-                        per_release = (path[depth - 2] == "releases" && path[depth - 1] == want_version)
-                        if ((top_level || per_release) && index($0, "\"" want_target "\"")) {
-                            value = $0
-                            sub(/^[^:]*:[[:space:]]*"/, "", value)
-                            sub(/".*$/, "", value)
-                            if (value ~ /^[0-9a-fA-F]{64}$/) { print tolower(value); exit }
-                        }
-                    }
-                }
-
-                if (n_close > n_open) { path[depth] = ""; depth-- }
-            }
-        ' "${MANIFEST_FILE}"
-    }
-
-    if [ "${HERDR_VERSION}" = "latest" ]; then
-        resolved="$(manifest_version || true)"
-        if [ -z "${resolved}" ]; then
-            # Fallback: the releases/latest page redirects to .../tag/v<X.Y.Z>, so
-            # the tag shows up in curl's effective URL. Preferred over the GitHub
-            # REST API, whose unauthenticated 60 req/h per-IP limit is easy to hit
-            # on shared CI runners.
-            echo "Falling back to the GitHub releases/latest redirect to resolve the newest release..."
-            resolved="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "${RELEASES_REPO}/releases/latest" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+$' || true)"
-            resolved="${resolved#v}"
-        fi
-        if [ -z "${resolved}" ]; then
-            echo "ERROR: could not resolve the latest herdr release. Pin an exact version via the 'version' option instead."
-            exit 1
-        fi
-        HERDR_VERSION="${resolved}"
-    fi
-
-    echo "Installing herdr ${HERDR_VERSION} (${TARGET})..."
-
-    # The Linux release asset is a bare executable, not an archive.
-    ASSET_URL="${RELEASES_REPO}/releases/download/v${HERDR_VERSION}/herdr-${TARGET}"
-    if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 300 -o "${tmpdir}/herdr" "${ASSET_URL}"; then
-        echo "ERROR: could not download ${ASSET_URL}."
-        echo "       Check that herdr ${HERDR_VERSION} exists and publishes a ${TARGET} asset:"
-        echo "       ${RELEASES_REPO}/releases"
-        exit 1
-    fi
-
-    # Verify the download against upstream's published checksum. Releases before
-    # 0.8.0 publish none, so a pinned older version installs unverified rather
-    # than failing the build - the option would otherwise be unusable.
-    EXPECTED_SHA256="$(manifest_sha256 "${HERDR_VERSION}" "${TARGET}" || true)"
-    if [ -n "${EXPECTED_SHA256}" ]; then
-        ACTUAL_SHA256="$(sha256sum < "${tmpdir}/herdr" | awk '{ print $1 }')"
-        if [ "${ACTUAL_SHA256}" != "${EXPECTED_SHA256}" ]; then
-            echo "ERROR: checksum mismatch for herdr-${TARGET} v${HERDR_VERSION}."
-            echo "       expected ${EXPECTED_SHA256}"
-            echo "       actual   ${ACTUAL_SHA256}"
-            exit 1
-        fi
-        echo "Verified SHA-256 ${EXPECTED_SHA256}."
-    elif [ "${MANIFEST_OK}" != "true" ]; then
-        # Do not claim upstream publishes no checksum when we simply could not read
-        # the manifest - the two cases need different answers from whoever reads
-        # this log.
-        echo "WARNING: the release manifest was unreachable, so herdr ${HERDR_VERSION} (${TARGET}) could NOT be checksum-verified."
-        echo "         This is a network failure, not a missing upstream checksum. Re-run the build to verify."
-    else
-        echo "WARNING: upstream publishes no SHA-256 for herdr ${HERDR_VERSION} (${TARGET}) - installing unverified."
-    fi
-
-    install -m 0755 "${tmpdir}/herdr" "${INSTALL_DIR}/herdr"
-fi
-
-# --- remote user configuration ---------------------------------------------
 
 # Resolve the remote user's home. _REMOTE_USER_HOME is supplied by the dev
 # container CLI; fall back to the passwd entry for standalone/docker builds.
@@ -243,18 +71,57 @@ if [ -z "${TARGET_USER_HOME}" ]; then
 fi
 TARGET_GROUP="$(id -gn "${TARGET_USER}" 2>/dev/null || echo "${TARGET_USER}")"
 
-CONFIG_DIR="${TARGET_USER_HOME}/.config/herdr"
-CONFIG_FILE="${CONFIG_DIR}/config.toml"
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "${tmpdir}"' EXIT
 
-if [ "${INSTALL_TUI}" = "true" ] && [ "${CONFIGURE_DEFAULTS}" = "true" ]; then
-    if [ -e "${CONFIG_FILE}" ]; then
-        echo "Leaving the existing ${CONFIG_FILE} untouched."
-    else
-        mkdir -p "${CONFIG_DIR}"
-        # herdr layers this file over its own built-in defaults, so it only
-        # needs to carry the keys this Feature manages - every key left out
-        # keeps upstream's default, including keys added by future releases.
-        cat > "${CONFIG_FILE}" <<EOF
+# Download a file, failing the build with a clear message. Upstream's scripts
+# are saved first rather than piped into sh, so a failed download can never
+# run as an empty or truncated script.
+fetch() {
+    if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 "$1" -o "$2"; then
+        echo "ERROR: could not download $1."
+        exit 1
+    fi
+}
+
+# Agent harnesses that receive the skills: Claude Code reads personal skills
+# from ~/.claude/skills, GitHub Copilot CLI from ~/.copilot/skills.
+SKILL_HOMES=()
+if [ "${SKILL_CLAUDE_CODE}" = "true" ]; then SKILL_HOMES+=(.claude); fi
+if [ "${SKILL_COPILOT}" = "true" ]; then SKILL_HOMES+=(.copilot); fi
+
+# Install one SKILL.md as skill <name> for every enabled harness.
+install_skill() {
+    local name="$1" file="$2" agent_home
+    for agent_home in "${SKILL_HOMES[@]}"; do
+        mkdir -p "${TARGET_USER_HOME}/${agent_home}/skills/${name}"
+        install -m 0644 "${file}" "${TARGET_USER_HOME}/${agent_home}/skills/${name}/SKILL.md"
+        # The agent's home may not have existed before this Feature ran.
+        chown "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}/${agent_home}" 2>/dev/null || true
+        chown -R "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}/${agent_home}/skills" 2>/dev/null || true
+        echo "Installed the ${name} agent skill to ${TARGET_USER_HOME}/${agent_home}/skills/${name}/SKILL.md."
+    done
+}
+
+# --- herdr TUI ---------------------------------------------------------------
+
+if [ "${INSTALL_TUI}" = "true" ]; then
+    # The command https://herdr.dev/tui/ documents. It always installs the
+    # latest release and verifies it against upstream's SHA-256 manifest.
+    fetch "${TUI_INSTALL_URL}" "${tmpdir}/herdr-install.sh"
+    HERDR_INSTALL_DIR="${INSTALL_DIR}" sh "${tmpdir}/herdr-install.sh"
+
+    CONFIG_DIR="${TARGET_USER_HOME}/.config/herdr"
+    CONFIG_FILE="${CONFIG_DIR}/config.toml"
+    if [ "${CONFIGURE_DEFAULTS}" = "true" ]; then
+        if [ -e "${CONFIG_FILE}" ]; then
+            echo "Leaving the existing ${CONFIG_FILE} untouched."
+        else
+            mkdir -p "${CONFIG_DIR}"
+            # herdr layers this file over its own built-in defaults, so it only
+            # needs to carry the keys this Feature manages - every key left out
+            # keeps upstream's default, including keys added by future releases.
+            cat > "${CONFIG_FILE}" <<EOF
 ##############################################################################
 # Generated by the 'herdr' Dev Container Feature.
 # https://github.com/bugrasan/devcontainers-features
@@ -273,152 +140,60 @@ if [ "${INSTALL_TUI}" = "true" ] && [ "${CONFIGURE_DEFAULTS}" = "true" ]; then
 onboarding = false
 
 [update]
-#-- Dev containers are disposable and herdr is installed by this Feature, not
-#-- by herdr's own installer, so both background calls to herdr.dev are noise:
-#-- 'herdr update' cannot manage this install, and the agent-detection
-#-- manifest that ships with the pinned binary is the one we want.
+#-- Dev containers are disposable and herdr is installed system-wide when the
+#-- image is built, so both background calls to herdr.dev are noise: 'herdr
+#-- update', run as this user, cannot replace /usr/local/bin/herdr, and the
+#-- agent-detection manifest that ships with the installed binary matches it.
 #-- Set the Feature's 'configureDefaults' option to false for upstream
 #-- behaviour. 'channel' is deliberately left unset so it keeps its default.
 version_check = false
 manifest_check = false
 EOF
-        chmod 0644 "${CONFIG_FILE}"
-        # ~/.config may not have existed before this Feature ran.
-        chown "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}/.config" 2>/dev/null || true
-        chown -R "${TARGET_USER}:${TARGET_GROUP}" "${CONFIG_DIR}" 2>/dev/null || true
-        echo "Wrote ${CONFIG_FILE} for user '${TARGET_USER}'."
-    fi
-fi
-
-# --- agent skill ------------------------------------------------------------
-
-if [ "${INSTALL_TUI}" = "true" ] && [ "${INSTALL_SKILL}" = "true" ]; then
-    SKILL_DIR="${TARGET_USER_HOME}/.claude/skills/herdr"
-    # 'herdr --skill' prints the copy bundled with THIS binary, so the skill
-    # always documents the CLI that is actually installed.
-    if "${INSTALL_DIR}/herdr" --skill > "${tmpdir}/SKILL.md" 2>/dev/null && [ -s "${tmpdir}/SKILL.md" ]; then
-        mkdir -p "${SKILL_DIR}"
-        install -m 0644 "${tmpdir}/SKILL.md" "${SKILL_DIR}/SKILL.md"
-        chown "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}/.claude" 2>/dev/null || true
-        chown -R "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}/.claude/skills" 2>/dev/null || true
-        echo "Installed the herdr agent skill to ${SKILL_DIR}/SKILL.md."
-    else
-        echo "WARNING: 'herdr --skill' is unavailable in herdr ${HERDR_VERSION} - skipping the agent skill."
-    fi
-fi
-
-# --- shell completions ------------------------------------------------------
-
-if [ "${INSTALL_TUI}" = "true" ] && [ "${INSTALL_COMPLETIONS}" = "true" ]; then
-    # 'herdr completion' only exists from 0.7.1 onwards. Generate into the temp
-    # directory first: an older pinned version must warn and carry on rather
-    # than fail the build, and a failed run must not truncate a completion file
-    # that is already there.
-    if "${INSTALL_DIR}/herdr" completion bash > "${tmpdir}/herdr.bash" 2>/dev/null &&
-        "${INSTALL_DIR}/herdr" completion zsh > "${tmpdir}/_herdr" 2>/dev/null &&
-        [ -s "${tmpdir}/herdr.bash" ] && [ -s "${tmpdir}/_herdr" ]; then
-        # Both are standard system-wide locations, picked up without editing any
-        # shell rc file: bash-completion lazy-loads by command name, and
-        # /usr/local/share/zsh/site-functions is on zsh's compiled-in fpath.
-        mkdir -p "${BASH_COMPLETION_DIR}" "${ZSH_COMPLETION_DIR}"
-        install -m 0644 "${tmpdir}/herdr.bash" "${BASH_COMPLETION_DIR}/herdr"
-        install -m 0644 "${tmpdir}/_herdr" "${ZSH_COMPLETION_DIR}/_herdr"
-        echo "Installed bash and zsh completions."
-    else
-        echo "WARNING: 'herdr completion' is unavailable in herdr ${HERDR_VERSION} - skipping shell completions."
-    fi
-fi
-
-# --- herdr-core (hc) -------------------------------------------------------
-
-if [ "${INSTALL_CORE}" = "true" ]; then
-    # One manifest answers version, download URL and SHA-256 for every target.
-    # Unlike herdr's manifest it has no fallback source, so failing to read it
-    # fails the build: an unverified core is never installed.
-    if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 30 "${CORE_MANIFEST_URL}" -o "${tmpdir}/core-manifest.json"; then
-        echo "ERROR: could not fetch the herdr-core release manifest from ${CORE_MANIFEST_URL}."
-        echo "       Check that releases.herdr.dev is reachable from the build, and that"
-        echo "       herdr-core ${CORE_VERSION} exists. Set 'installCore' to false to skip it."
-        exit 1
-    fi
-
-    # Same approach as upstream's install.sh: the manifest is flat enough to
-    # read with sed once whitespace is gone. Target names match herdr's.
-    core_flat="$(tr -d '\n\r\t ' < "${tmpdir}/core-manifest.json")"
-    core_entry="$(printf '%s' "${core_flat}" | sed -n "s/.*\"${TARGET}\":{\([^}]*\)}.*/\1/p")"
-    CORE_URL="$(printf '%s' "${core_entry}" | sed -n 's/.*"url":"\([^"]*\)".*/\1/p')"
-    CORE_SHA256="$(printf '%s' "${core_entry}" | sed -n 's/.*"sha256":"\([0-9a-fA-F]\{64\}\)".*/\1/p' | tr 'A-F' 'a-f')"
-    CORE_RESOLVED="$(printf '%s' "${core_flat}" | sed -n 's/^{"version":"\([^"]*\)".*/\1/p')"
-    # A pinned version must get exactly that release, not whatever the
-    # manifest names.
-    if [ "${CORE_VERSION}" != "latest" ] && [ "${CORE_RESOLVED}" != "${CORE_VERSION}" ]; then
-        echo "ERROR: ${CORE_MANIFEST_URL} names herdr-core '${CORE_RESOLVED}', not the pinned '${CORE_VERSION}'."
-        exit 1
-    fi
-    if [ -z "${CORE_URL}" ] || [ -z "${CORE_SHA256}" ] || [ -z "${CORE_RESOLVED}" ]; then
-        echo "ERROR: the herdr-core manifest ${CORE_MANIFEST_URL} lists no version, or no ${TARGET} build with a SHA-256."
-        exit 1
-    fi
-    # Only download from upstream's own release service.
-    case "${CORE_URL}" in
-        "${CORE_RELEASES_URL}"/*) ;;
-        *)
-            echo "ERROR: the herdr-core manifest points outside ${CORE_RELEASES_URL}: ${CORE_URL}"
-            exit 1
-            ;;
-    esac
-
-    echo "Installing herdr-core ${CORE_RESOLVED} (${TARGET})..."
-    if ! curl -fsSL --retry 3 --connect-timeout 10 --max-time 300 -o "${tmpdir}/herdr-core.tar.gz" "${CORE_URL}"; then
-        echo "ERROR: could not download ${CORE_URL}."
-        exit 1
-    fi
-    CORE_ACTUAL_SHA256="$(sha256sum < "${tmpdir}/herdr-core.tar.gz" | awk '{ print $1 }')"
-    if [ "${CORE_ACTUAL_SHA256}" != "${CORE_SHA256}" ]; then
-        echo "ERROR: checksum mismatch for herdr-core-${TARGET} ${CORE_RESOLVED}."
-        echo "       expected ${CORE_SHA256}"
-        echo "       actual   ${CORE_ACTUAL_SHA256}"
-        exit 1
-    fi
-    echo "Verified SHA-256 ${CORE_SHA256}."
-
-    # The archive holds the static 'herdr-core' binary plus its licenses.
-    mkdir -p "${tmpdir}/core"
-    tar -xzf "${tmpdir}/herdr-core.tar.gz" -C "${tmpdir}/core" herdr-core
-    install -m 0755 "${tmpdir}/core/herdr-core" "${INSTALL_DIR}/herdr-core"
-
-    # Upstream names the binary herdr-core and adds 'hc' only when no other
-    # 'hc' exists (some window managers ship one). Do the same, system-wide;
-    # a link left by an earlier run of this Feature is kept as it is.
-    if [ -L "${INSTALL_DIR}/hc" ] && [ "$(readlink "${INSTALL_DIR}/hc")" = "herdr-core" ]; then
-        :
-    elif command -v hc >/dev/null 2>&1 || [ -e "${INSTALL_DIR}/hc" ] || [ -L "${INSTALL_DIR}/hc" ]; then
-        echo "WARNING: an 'hc' command already exists ($(command -v hc || echo "${INSTALL_DIR}/hc")) - herdr-core is available as 'herdr-core' only."
-    else
-        ln -s herdr-core "${INSTALL_DIR}/hc"
-    fi
-
-    # Its agent skill rides on the same 'installSkill' option as herdr's: two
-    # separate skills, because the two CLIs are different tools. 'hc --skill'
-    # prints the full manual without the frontmatter Claude Code needs, so
-    # install upstream's skill file from the matching release tag instead; it
-    # tells the agent to read that manual from the installed binary.
-    if [ "${INSTALL_SKILL}" = "true" ]; then
-        CORE_SKILL_DIR="${TARGET_USER_HOME}/.claude/skills/herdr-core"
-        CORE_SKILL_URL="https://raw.githubusercontent.com/herdrdev/herdr-core/v${CORE_RESOLVED}/skills/herdr-core/SKILL.md"
-        if curl -fsSL --retry 3 --connect-timeout 10 --max-time 30 "${CORE_SKILL_URL}" -o "${tmpdir}/CORE_SKILL.md" &&
-            head -2 "${tmpdir}/CORE_SKILL.md" | grep -qx 'name: herdr-core'; then
-            mkdir -p "${CORE_SKILL_DIR}"
-            install -m 0644 "${tmpdir}/CORE_SKILL.md" "${CORE_SKILL_DIR}/SKILL.md"
-            chown "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}/.claude" 2>/dev/null || true
-            chown -R "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}/.claude/skills" 2>/dev/null || true
-            echo "Installed the herdr-core agent skill to ${CORE_SKILL_DIR}/SKILL.md."
-        else
-            echo "WARNING: no herdr-core agent skill found at ${CORE_SKILL_URL} - skipping it."
+            chmod 0644 "${CONFIG_FILE}"
+            # ~/.config may not have existed before this Feature ran.
+            chown "${TARGET_USER}:${TARGET_GROUP}" "${TARGET_USER_HOME}/.config" 2>/dev/null || true
+            chown -R "${TARGET_USER}:${TARGET_GROUP}" "${CONFIG_DIR}" 2>/dev/null || true
+            echo "Wrote ${CONFIG_FILE} for user '${TARGET_USER}'."
         fi
     fi
 
-    "${INSTALL_DIR}/herdr-core" --version
+    if [ "${INSTALL_COMPLETIONS}" = "true" ]; then
+        # Standard system-wide locations, picked up without editing any shell
+        # rc file: bash-completion lazy-loads by command name, and
+        # /usr/local/share/zsh/site-functions is on zsh's compiled-in fpath.
+        mkdir -p "${BASH_COMPLETION_DIR}" "${ZSH_COMPLETION_DIR}"
+        "${INSTALL_DIR}/herdr" completion bash > "${BASH_COMPLETION_DIR}/herdr"
+        "${INSTALL_DIR}/herdr" completion zsh > "${ZSH_COMPLETION_DIR}/_herdr"
+        chmod 0644 "${BASH_COMPLETION_DIR}/herdr" "${ZSH_COMPLETION_DIR}/_herdr"
+        echo "Installed bash and zsh completions."
+    fi
+
+    if [ "${INSTALL_TUI_SKILL}" = "true" ]; then
+        # 'herdr --skill' prints the skill bundled with the installed binary.
+        "${INSTALL_DIR}/herdr" --skill > "${tmpdir}/herdr-SKILL.md"
+        install_skill herdr "${tmpdir}/herdr-SKILL.md"
+    fi
+fi
+
+# --- herdr-core (hc) ---------------------------------------------------------
+
+if [ "${INSTALL_CORE}" = "true" ]; then
+    # Upstream's script installs herdr-core plus an 'hc' link (only when no
+    # other 'hc' exists) and verifies the archive's SHA-256. It pins through
+    # HC_VERSION, a bare version like '0.1.21'; empty means the latest.
+    CORE_VERSION="${CORE_VERSION#v}"
+    if [ "${CORE_VERSION}" = "latest" ]; then CORE_VERSION=""; fi
+    fetch "${CORE_INSTALL_URL}" "${tmpdir}/herdr-core-install.sh"
+    HC_VERSION="${CORE_VERSION}" HC_INSTALL_DIR="${INSTALL_DIR}" sh "${tmpdir}/herdr-core-install.sh"
+
+    if [ "${INSTALL_CORE_SKILL}" = "true" ]; then
+        # 'hc --skill' prints a manual without the frontmatter agents need,
+        # so take upstream's skill file from the installed version's tag; it
+        # tells the agent to read that manual from the binary.
+        installed="$("${INSTALL_DIR}/herdr-core" --version | awk '{ print $2 }')"
+        fetch "${CORE_SKILL_BASE_URL}/v${installed}/skills/herdr-core/SKILL.md" "${tmpdir}/herdr-core-SKILL.md"
+        install_skill herdr-core "${tmpdir}/herdr-core-SKILL.md"
+    fi
 fi
 
 # Only clean up what we caused - leave the image's apt state alone otherwise.
@@ -427,13 +202,6 @@ if [ "${APT_UPDATED}" = "true" ]; then
     rm -rf /var/lib/apt/lists/*
 fi
 
-if [ "${INSTALL_TUI}" = "true" ]; then
-    "${INSTALL_DIR}/herdr" --version
-fi
-echo "Done! For remote user '${TARGET_USER}':"
-if [ "${INSTALL_TUI}" = "true" ]; then
-    echo "      herdr ${HERDR_VERSION} installed as '${INSTALL_DIR}/herdr'."
-fi
-if [ "${INSTALL_CORE}" = "true" ]; then
-    echo "      herdr-core ${CORE_RESOLVED} installed as '${INSTALL_DIR}/herdr-core'."
-fi
+echo "Done! Installed for remote user '${TARGET_USER}':"
+if [ "${INSTALL_TUI}" = "true" ]; then "${INSTALL_DIR}/herdr" --version; fi
+if [ "${INSTALL_CORE}" = "true" ]; then "${INSTALL_DIR}/herdr-core" --version; fi
