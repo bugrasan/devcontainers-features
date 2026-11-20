@@ -1,22 +1,24 @@
 # Tech debt
 
-Workarounds in this repository. Each one compensates for upstream behavior and should go once upstream changes.
+Workarounds in this repository. Each one compensates for upstream behavior and should go once upstream changes. Upstream source links are permalinks to the commit that was checked.
 
 ## TD-001: herdr – delete herdr-core before running upstream's installer
 
 - **Where:** [`src/herdr/install.sh`](../src/herdr/install.sh), the `rm -f "${INSTALL_DIR}/herdr-core"` line in the herdr-core section
 - **Decision:** [AD-002](arch-decisions.md#ad-002-herdr--install-herdr-core-fresh-even-when-it-exists)
 - **Upstream issue:** none filed yet
-- **Test:** `existing_core` scenario in [`test/herdr/scenarios.json`](../test/herdr/scenarios.json)
+- **Tests:** scenarios in [`test/herdr/scenarios.json`](../test/herdr/scenarios.json):
+  - `existing_core_older`: an older pinned version replaces a newer one;
+  - `existing_core_upgrade`: an upgrade leaves no core state in the image.
 
 ### Problem
 
-Upstream's herdr-core installer (`https://releases.herdr.dev/core/install.sh`, [`distribution/install.sh`](https://github.com/herdrdev/herdr-core/blob/master/distribution/install.sh#L109-L111)) checks whether `$HC_INSTALL_DIR/herdr-core` already exists. If it does, the installer runs `herdr-core update --from <new binary>` instead of copying the binary into place.
+Upstream's herdr-core installer (`https://releases.herdr.dev/core/install.sh`, [`distribution/install.sh`](https://github.com/herdrdev/herdr-core/blob/c7517808d64f06609e4ecf0db1757005373cc3a3/distribution/install.sh#L109-L111)) checks whether `$HC_INSTALL_DIR/herdr-core` already exists. If it does, the installer runs `herdr-core update --from <new binary>` instead of copying the binary into place.
 
-That update path ([`crates/herdr-core/src/cli/update.rs`](https://github.com/herdrdev/herdr-core/blob/master/crates/herdr-core/src/cli/update.rs)) is built for a live machine:
+That update path ([`crates/herdr-core/src/cli/update.rs`](https://github.com/herdrdev/herdr-core/blob/c7517808d64f06609e4ecf0db1757005373cc3a3/crates/herdr-core/src/cli/update.rs#L53-L104)) is built for a live machine:
 
-- it refuses a version older than the installed one unless `--force` is passed, and the installer passes no `--force`;
-- after the swap it asks the core for its status, which starts a core when none is running ([`cli.rs` L221–L222](https://github.com/herdrdev/herdr-core/blob/master/crates/herdr-core/src/cli.rs#L221-L222)).
+- it refuses a version older than the installed one unless `--force` is passed ([L75–L77](https://github.com/herdrdev/herdr-core/blob/c7517808d64f06609e4ecf0db1757005373cc3a3/crates/herdr-core/src/cli/update.rs#L75-L77)), and the installer passes no `--force`;
+- after the swap it asks the core for its status ([L94](https://github.com/herdrdev/herdr-core/blob/c7517808d64f06609e4ecf0db1757005373cc3a3/crates/herdr-core/src/cli/update.rs#L94)), which starts a core when none is running ([`cli.rs` L221–L222](https://github.com/herdrdev/herdr-core/blob/c7517808d64f06609e4ecf0db1757005373cc3a3/crates/herdr-core/src/cli.rs#L221-L222)).
 
 In an image build this means:
 
