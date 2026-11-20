@@ -3,7 +3,7 @@
 # Scenario: herdr-core 0.1.20 is already in /usr/local/bin and 'latest' is
 # requested. Upstream's update path would succeed here, but it starts a root
 # core during the build whose state lands in the image. The Feature's
-# workaround (docs/tech-debt.md TD-001) installs fresh, so no state exists.
+# workaround (README.md, TD-001) installs fresh, so no state exists.
 # Runs as root (remoteUser), since /root is not readable by other users.
 
 set -e

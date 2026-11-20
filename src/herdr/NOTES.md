@@ -47,7 +47,7 @@ This is a **workaround**. Without it, upstream's script finds the existing binar
 - it refuses a `coreVersion` older than the installed one, which fails the build;
 - it starts a core as root during the build, and that core's state (`/root/.local/state/herdr-core/`) ends up in the image.
 
-Deleting the binary makes the script take its fresh-install path, which starts nothing. An existing `hc` link is kept: it points to `herdr-core` again once the new binary is in place. The `existing_core_older` and `existing_core_upgrade` test scenarios cover both effects. See [`docs/tech-debt.md`](https://github.com/bugrasan/devcontainers-features/blob/main/docs/tech-debt.md) (TD-001) for when the workaround can go.
+Deleting the binary makes the script take its fresh-install path, which starts nothing. An existing `hc` link is kept: it points to `herdr-core` again once the new binary is in place. The `existing_core_older` and `existing_core_upgrade` test scenarios cover both effects. See TD-001 in the [repository README](https://github.com/bugrasan/devcontainers-features#maintainer-notes) for when the workaround can go.
 
 ## Generated configuration
 

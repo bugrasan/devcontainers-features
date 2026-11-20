@@ -192,7 +192,7 @@ if [ "${INSTALL_CORE}" = "true" ]; then
     CORE_VERSION="${CORE_VERSION#v}"
     if [ "${CORE_VERSION}" = "latest" ]; then CORE_VERSION=""; fi
     fetch "${CORE_INSTALL_URL}" "${tmpdir}/herdr-core-install.sh"
-    # WORKAROUND (docs/tech-debt.md TD-001): with herdr-core already present,
+    # WORKAROUND (README.md, TD-001): with herdr-core already present,
     # upstream's script updates in place - refusing an older version and
     # starting a root core whose state lands in the image. Removing the binary
     # makes it install fresh; an existing 'hc' link resolves again afterwards.

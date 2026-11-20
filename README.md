@@ -101,3 +101,13 @@ and installs the herdr-core agent skill for Claude Code and GitHub Copilot CLI
     "ghcr.io/bugrasan/devcontainers-features/herdr:2": {}
 }
 ```
+
+## Maintainer notes
+
+- **Tests:** `devcontainer features test --features <feature> --base-image mcr.microsoft.com/devcontainers/base:ubuntu .` runs `test/<feature>/test.sh` and every scenario in `test/<feature>/scenarios.json`.
+- **herdr installs only through upstream's official scripts** (`herdr.dev/install.sh`, `releases.herdr.dev/core/install.sh`). The TUI script cannot pin a version, so the Feature cannot either; rebuild without cache to update.
+- **Workaround TD-001 (herdr):** `src/herdr/install.sh` deletes `/usr/local/bin/herdr-core` before running upstream's installer.
+  - Why: with the binary present, the installer runs [`update --from`](https://github.com/herdrdev/herdr-core/blob/c7517808d64f06609e4ecf0db1757005373cc3a3/distribution/install.sh#L109-L111). In an image build that refuses an older `coreVersion` and starts a root core whose state lands in the image.
+  - Tests: `existing_core_older` and `existing_core_upgrade`.
+  - Upstream issue: none filed yet.
+  - Remove when upstream's installer offers a non-interactive fresh install.
