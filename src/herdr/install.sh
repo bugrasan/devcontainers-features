@@ -19,7 +19,8 @@ TARGET_USER_HOME="${_REMOTE_USER_HOME:-}"
 RELEASES_REPO="https://github.com/herdrdev/herdr"
 # Upstream's release manifest - the same file herdr.dev serves as latest.json
 # and that 'herdr update' reads. Taken from raw.githubusercontent.com rather
-# than herdr.dev so the build only ever needs to reach GitHub.
+# than herdr.dev so installing herdr itself only needs to reach GitHub
+# (herdr-core is the exception: it needs releases.herdr.dev).
 MANIFEST_URL="https://raw.githubusercontent.com/herdrdev/herdr/master/distribution/latest.json"
 INSTALL_DIR="/usr/local/bin"
 BASH_COMPLETION_DIR="/usr/share/bash-completion/completions"
@@ -336,6 +337,12 @@ if [ "${INSTALL_CORE}" = "true" ]; then
     CORE_URL="$(printf '%s' "${core_entry}" | sed -n 's/.*"url":"\([^"]*\)".*/\1/p')"
     CORE_SHA256="$(printf '%s' "${core_entry}" | sed -n 's/.*"sha256":"\([0-9a-fA-F]\{64\}\)".*/\1/p' | tr 'A-F' 'a-f')"
     CORE_RESOLVED="$(printf '%s' "${core_flat}" | sed -n 's/^{"version":"\([^"]*\)".*/\1/p')"
+    # A pinned version must get exactly that release, not whatever the
+    # manifest names.
+    if [ "${CORE_VERSION}" != "latest" ] && [ "${CORE_RESOLVED}" != "${CORE_VERSION}" ]; then
+        echo "ERROR: ${CORE_MANIFEST_URL} names herdr-core '${CORE_RESOLVED}', not the pinned '${CORE_VERSION}'."
+        exit 1
+    fi
     if [ -z "${CORE_URL}" ] || [ -z "${CORE_SHA256}" ] || [ -z "${CORE_RESOLVED}" ]; then
         echo "ERROR: the herdr-core manifest ${CORE_MANIFEST_URL} lists no version, or no ${TARGET} build with a SHA-256."
         exit 1
@@ -370,10 +377,10 @@ if [ "${INSTALL_CORE}" = "true" ]; then
 
     # Upstream names the binary herdr-core and adds 'hc' only when no other
     # 'hc' exists (some window managers ship one). Do the same, system-wide;
-    # a link left by an earlier run of this Feature is refreshed.
+    # a link left by an earlier run of this Feature is kept as it is.
     if [ -L "${INSTALL_DIR}/hc" ] && [ "$(readlink "${INSTALL_DIR}/hc")" = "herdr-core" ]; then
         :
-    elif command -v hc >/dev/null 2>&1 || [ -e "${INSTALL_DIR}/hc" ]; then
+    elif command -v hc >/dev/null 2>&1 || [ -e "${INSTALL_DIR}/hc" ] || [ -L "${INSTALL_DIR}/hc" ]; then
         echo "WARNING: an 'hc' command already exists ($(command -v hc || echo "${INSTALL_DIR}/hc")) - herdr-core is available as 'herdr-core' only."
     else
         ln -s herdr-core "${INSTALL_DIR}/hc"

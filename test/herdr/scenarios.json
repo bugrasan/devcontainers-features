@@ -45,5 +45,15 @@
                 "installSkill": false
             }
         }
+    },
+    "existing_hc": {
+        "build": {
+            "dockerfile": "Dockerfile"
+        },
+        "features": {
+            "herdr": {
+                "installSkill": false
+            }
+        }
     }
 }

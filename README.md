@@ -90,8 +90,11 @@ default it also
 seeds a container-friendly `~/.config/herdr/config.toml` that skips the
 first-run wizard and stops herdr's two background calls to herdr.dev, installs
 herdr's agent skill to `~/.claude/skills/herdr/SKILL.md`, and adds bash/zsh
-completions. It installs the binary only - nothing is started; run `herdr` to
-begin or reattach to a session. See the
+completions. It also installs herdr-core (`hc`), the headless core that keeps
+programs and agents running in terminals that outlive the viewer, from
+releases.herdr.dev (its only release channel), so the build must reach that
+host; set `installCore: false` to skip it. It installs the binaries only -
+nothing is started; run `herdr` to begin or reattach to a session. See the
 [feature README](src/herdr/README.md) for the options.
 ```json
 "features": {

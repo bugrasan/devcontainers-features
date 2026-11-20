@@ -4,7 +4,7 @@
 - `version: latest` (the default) is resolved at **build time** from upstream's release manifest, the same `latest.json` that `herdr update` reads. Pin an exact release (`"0.8.2"`, or `"v0.8.2"`) for reproducible builds.
 - The download is **verified against upstream's published SHA-256**, read from that manifest. Releases before `0.8.0` publish no checksum: those install with a warning rather than failing, so the `version` option stays usable across upstream's history.
 - No language runtime and no system libraries are needed: the Linux release binary is a statically linked (musl, static-PIE) Rust binary, so nothing has to be present in the image for it to run.
-- The install script itself is `bash` and bootstraps its prerequisites (`curl`, `ca-certificates`) with `apt-get`, so it targets Debian- and Ubuntu-family base images, like the other Features in this repository. It does not run on Alpine.
+- The install script itself is `bash` and bootstraps its prerequisites (`curl`, `ca-certificates`, and, for herdr-core, `tar` and `gzip`) with `apt-get`, so it targets Debian- and Ubuntu-family base images, like the other Features in this repository. It does not run on Alpine.
 
 ## Why not upstream's `install.sh`
 
