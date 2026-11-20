@@ -94,8 +94,8 @@ install_skill() {
 
 if [ "${INSTALL_TUI}" = "true" ]; then
     # The installer named in https://herdr.dev/tui/docs/install/, run as the
-    # remote user.
-    su "${TARGET_USER}" -c "curl -fsSL ${TUI_INSTALL_URL} | sh"
+    # remote user. pipefail (needs bash) makes a failed download fail the build.
+    su -s /bin/bash "${TARGET_USER}" -c "set -o pipefail; curl -fsSL ${TUI_INSTALL_URL} | sh"
 
     CONFIG_DIR="${TARGET_USER_HOME}/.config/herdr"
     CONFIG_FILE="${CONFIG_DIR}/config.toml"
@@ -168,7 +168,7 @@ if [ "${INSTALL_CORE}" = "true" ]; then
     # bare version like '0.1.21'; empty means the latest.
     CORE_VERSION="${CORE_VERSION#v}"
     if [ "${CORE_VERSION}" = "latest" ]; then CORE_VERSION=""; fi
-    HC_VERSION="${CORE_VERSION}" su "${TARGET_USER}" -c "curl -fsSL ${CORE_INSTALL_URL} | sh"
+    HC_VERSION="${CORE_VERSION}" su -s /bin/bash "${TARGET_USER}" -c "set -o pipefail; curl -fsSL ${CORE_INSTALL_URL} | sh"
 
     if [ "${INSTALL_CORE_SKILL}" = "true" ] && [ "${#SKILL_HOMES[@]}" -gt 0 ]; then
         # 'hc --skill' prints a manual without the frontmatter agents need,
