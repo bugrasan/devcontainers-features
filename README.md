@@ -1,113 +1,41 @@
-# README
+# devcontainers-features
 
-currently this repo contains the folling devcontainer features:
-- 'structurizr-cli', see [Structurizr-CLI](https://docs.structurizr.com/cli)
-- 'twilio-cli', see [Twilio CLI](https://www.twilio.com/docs/twilio-cli)
-- 'claude-code', see [Claude Code](https://code.claude.com/docs/en/overview)
-- 'pi-dev', see [Pi](https://pi.dev)
-- 'speckit', see [GitHub Spec Kit](https://github.com/github/spec-kit)
-- 'otel-collector-contrib', see [OpenTelemetry Collector Contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib)
-- 'superfile', see [superfile](https://github.com/yorukot/superfile)
-- 'herdr', see [herdr](https://github.com/herdrdev/herdr)
+[Dev Container Features](https://containers.dev/implementors/features/), published as OCI artifacts to `ghcr.io/bugrasan/devcontainers-features`.
 
+## Usage
 
-## structurizr-cli
 ```json
 "features": {
-    "ghcr.io/bugrasan/devcontainers-features/structurizr-cli:1": {}
+    "ghcr.io/bugrasan/devcontainers-features/<feature>:<tag>": {}
 }
 ```
 
-## twilio-cli
-```json
-"features": {
-    "ghcr.io/bugrasan/devcontainers-features/twilio-cli:0": {}
-}
-```
+Each Feature's README lists its options.
 
-## claude-code
-```json
-"features": {
-    "ghcr.io/bugrasan/devcontainers-features/claude-code:1": {}
-}
-```
+## Published artifacts
 
-## pi-dev
-Requires Node.js >=22.19.0 and npm - add a Feature that provides them (e.g.
-`ghcr.io/devcontainers/features/node`) before this one.
-```json
-"features": {
-    "ghcr.io/bugrasan/devcontainers-features/pi-dev:1": {}
-}
-```
+Each Feature artifact holds `devcontainer-feature-<feature>.tgz`, a tarball of `src/<feature>/`.
+The "Installs" column lists what the Feature puts into the container.
 
-## otel-collector-contrib
-Installs the OpenTelemetry Collector Contrib distribution (`otelcol-contrib`,
-includes the `azuremonitorexporter`) with a default OTLP → Azure Application
-Insights pipeline, auto-started on container start. Set the
-`APPLICATIONINSIGHTS_CONNECTION_STRING` env var (via `remoteEnv`/`containerEnv`)
-and enable VS Code's OTel agent telemetry settings - see the
-[feature README](src/otel-collector-contrib/README.md) for the recommended
-`github.copilot.chat.otel.*` settings and `containerEnv` wiring.
-```json
-"features": {
-    "ghcr.io/bugrasan/devcontainers-features/otel-collector-contrib:1": {}
-}
-```
-
-## speckit
-Installs the `specify` CLI (Spec-Driven Development) via uv. Requires Python
-3.11+ and uv to already be present - add the `python` and a `uv` Feature before
-this one (both are already provided by the `devcontainer-base-ai` image).
-```json
-"features": {
-    "ghcr.io/bugrasan/devcontainers-features/speckit:1": {}
-}
-```
-
-## superfile
-Installs [superfile](https://github.com/yorukot/superfile), a modern terminal
-file manager, from its official GitHub release. The binary is installed under
-upstream's command name `spf` (add a `superfile` symlink with
-`createAlias`). By default it also writes a container-friendly
-`~/.config/superfile/config.toml` for the remote user, whose main job is
-turning off superfile's 24h auto-update check so a disposable container never
-phones home; that config also defaults `nerdfont` to false, since the terminal
-font lives on the host - see the [feature README](src/superfile/README.md) for
-that, the optional preview/clipboard/zoxide tools and `cd_on_quit` support.
-```json
-"features": {
-    "ghcr.io/bugrasan/devcontainers-features/superfile:1": {}
-}
-```
-
-## herdr
-Installs the [herdr](https://github.com/herdrdev/herdr) TUI (`herdr`) and
-[herdr-core](https://github.com/herdrdev/herdr-core) (`hc`), the headless core
-that keeps programs and agents running in terminals that outlive the viewer.
-Both are installed with upstream's official install scripts, into
-`/usr/local/bin`, and both are optional (`installTui`, `installCore`; turning
-both off fails the build). The herdr TUI script always installs the latest
-release; herdr-core can be pinned with `coreVersion`. By default it also seeds
-a container-friendly `~/.config/herdr/config.toml`, adds bash/zsh completions,
-and installs the herdr-core agent skill for Claude Code and GitHub Copilot CLI
-(herdr's own skill is opt-in). The build must reach `herdr.dev`, `github.com`,
-`release-assets.githubusercontent.com`, `releases.herdr.dev`, and
-`raw.githubusercontent.com`. Nothing is started; run
-`herdr` to begin or reattach to a session. See the
-[feature README](src/herdr/README.md) for the options.
-```json
-"features": {
-    "ghcr.io/bugrasan/devcontainers-features/herdr:2": {}
-}
-```
+| Artifact | Tag | Installs |
+|---|---|---|
+| [`claude-code`](src/claude-code/README.md) | `1` | Claude Code CLI (`claude`) via its native installer; LSP plugins; sets `ENABLE_LSP_TOOL=1` |
+| [`herdr`](src/herdr/README.md) | `2` | herdr TUI (`herdr`) and herdr-core (`hc`) via upstream's install scripts; config; bash/zsh completions; agent skills for Claude Code and GitHub Copilot CLI |
+| [`otel-collector-contrib`](src/otel-collector-contrib/README.md) | `1` | OpenTelemetry Collector Contrib (`otelcol-contrib`) with a default OTLP to Azure Application Insights config; starts on container start |
+| [`pi-dev`](src/pi-dev/README.md) | `1` | Pi coding agent CLI (`pi`) via the pi.dev installer; needs Node.js >=22.19.0 and npm |
+| [`speckit`](src/speckit/README.md) | `1` | GitHub Spec Kit CLI (`specify`) via uv; needs Python 3.11+ and uv |
+| [`structurizr-cli`](src/structurizr-cli/README.md) | `0` | Structurizr CLI (`structurizr.sh`) in `/opt/structurizr-cli`; optional JDK; needs JDK 17+ |
+| [`superfile`](src/superfile/README.md) | `1` | superfile terminal file manager (`spf`); optional preview, clipboard, and zoxide tools; container-friendly config |
+| [`twilio-cli`](src/twilio-cli/README.md) | `0` | Twilio CLI (`twilio`) from Twilio's apt repository |
+| collection (`ghcr.io/bugrasan/devcontainers-features`) | `latest` | No Feature; `devcontainer-collection.json`, the metadata index of all Features |
 
 ## Maintainer notes
 
-- **Tests:** `devcontainer features test --features <feature> --base-image mcr.microsoft.com/devcontainers/base:ubuntu .` runs `test/<feature>/test.sh` and every scenario in `test/<feature>/scenarios.json`.
-- **herdr installs only through upstream's official scripts** (`herdr.dev/install.sh`, `releases.herdr.dev/core/install.sh`). The TUI script cannot pin a version, so the Feature cannot either; rebuild without cache to update.
-- **Workaround TD-001 (herdr):** `src/herdr/install.sh` deletes `/usr/local/bin/herdr-core` before running upstream's installer.
-  - Why: with the binary present, the installer runs [`update --from`](https://github.com/herdrdev/herdr-core/blob/c7517808d64f06609e4ecf0db1757005373cc3a3/distribution/install.sh#L109-L111). In an image build that refuses an older `coreVersion` and starts a root core whose state lands in the image.
-  - Tests: `existing_core_older` and `existing_core_upgrade`.
-  - Upstream issue: none filed yet.
-  - Remove when upstream's installer offers a non-interactive fresh install.
+- Test a Feature: `devcontainer features test --features <feature> --base-image mcr.microsoft.com/devcontainers/base:ubuntu .`
+- Release: a push to `main` that changes `src/**` runs the tests, publishes to ghcr.io, and commits the regenerated Feature READMEs
+- herdr: upstream's TUI install script cannot pin a version; rebuild without cache to update
+- Workaround TD-001 (herdr): `src/herdr/install.sh` deletes `/usr/local/bin/herdr-core` before upstream's installer runs
+  - Why: with the binary present, the installer runs [`update --from`](https://github.com/herdrdev/herdr-core/blob/c7517808d64f06609e4ecf0db1757005373cc3a3/distribution/install.sh#L109-L111), which refuses an older `coreVersion` and leaves a root core's state in the image
+  - Tests: `existing_core_older` and `existing_core_upgrade`
+  - Upstream issue: none filed yet
+  - Remove when upstream's installer offers a non-interactive fresh install
