@@ -1,0 +1,26 @@
+##############################################################################
+# Copied by the 'herdr' Dev Container Feature.
+# https://github.com/bugrasan/devcontainers-features
+#
+# This file is intentionally PARTIAL: herdr loads its built-in defaults first
+# and then applies this file on top, so anything not listed here keeps
+# upstream's default. Edit it freely - this Feature never overwrites an
+# existing config file.
+#
+# Print the full commented default config with: herdr --default-config
+# Full reference: https://herdr.dev/docs/config-reference/
+##############################################################################
+
+#-- Skip the first-run notification setup. A dev container is rebuilt from
+#-- scratch, so the wizard would greet the user on every rebuild.
+onboarding = false
+
+[update]
+#-- Dev containers are disposable and herdr is installed when the image is
+#-- built, so both background calls to herdr.dev are noise: rebuilding the
+#-- image is the update path, and the agent-detection manifest that ships
+#-- with the installed binary matches it.
+#-- Set the Feature's 'disableTuiUpdates' option to false for upstream
+#-- behaviour. 'channel' is deliberately left unset so it keeps its default.
+version_check = false
+manifest_check = false

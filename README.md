@@ -92,7 +92,8 @@ always installs the latest release; herdr-core can be pinned with
 `coreVersion`. By default it also seeds
 a container-friendly `~/.config/herdr/config.toml`, adds bash/zsh completions,
 and installs the herdr-core agent skill for Claude Code and GitHub Copilot CLI
-(herdr's own skill is opt-in). The build must reach `herdr.dev`, `github.com`,
+(herdr's own skill is opt-in). Update checks are off for both by default
+(`disableTuiUpdates`, `disableCoreUpdates`). The build must reach `herdr.dev`, `github.com`,
 `release-assets.githubusercontent.com`, `releases.herdr.dev`, and
 `raw.githubusercontent.com`. Nothing is started; run
 `herdr` to begin or reattach to a session. See the

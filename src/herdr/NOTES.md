@@ -12,7 +12,7 @@ The Feature runs upstream's official install scripts, unchanged, as the remote u
 - Each script verifies its download against the SHA-256 in upstream's release manifest.
 - The Feature's own `install.sh` is `bash` and bootstraps what the scripts need (`curl`, `ca-certificates`, `coreutils`, and, for herdr-core, `tar` and `gzip`) with `apt-get`. It targets Debian- and Ubuntu-family base images, like the other Features in this repository. It does not run on Alpine.
 
-- `su` passes the build environment to upstream's scripts, so `HERDR_INSTALL_DIR`, `HC_INSTALL_DIR`, or `HERDR_RELEASES_URL` set in the image change where they install, and the Feature's config, completion, and skill steps then fail.
+- `su` passes the build environment to upstream's scripts, so `HERDR_INSTALL_DIR`, `HC_INSTALL_DIR`, or `HERDR_RELEASES_URL` set in the image change where they install, and the Feature's config, completion, and skill steps then fail. Both scripts ignore an empty `HERDR_RELEASES_URL`, so the Feature's own setting (see [herdr-core](#herdr-core-hc)) does not affect the install.
 - **Upgrading from herdr 2.x:** that version installed into `/usr/local/bin`. On an image built with it, remove `/usr/local/bin/herdr`, `/usr/local/bin/herdr-core`, and `/usr/local/bin/hc` first: otherwise they shadow the new binaries, and the old `hc` stops upstream's script from creating `~/.local/bin/hc`.
 
 ### Versions
@@ -39,7 +39,7 @@ The image build needs to reach:
 | `installTui` | `true` | the herdr TUI, with its config and completions |
 | `installCore` | `true` | herdr-core, with an `hc` link |
 
-With `installTui: false`, the TUI-only options (`configureDefaults`, `installCompletions`, and `installTuiSkill`) do nothing. With `installCore: false`, `coreVersion` and `installCoreSkill` do nothing.
+With `installTui: false`, the TUI-only options (`configureDefaults`, `disableTuiUpdates`, `installCompletions`, and `installTuiSkill`) do nothing. With `installCore: false`, `coreVersion` and `installCoreSkill` do nothing.
 
 ### Images that already have herdr-core
 
@@ -47,9 +47,9 @@ This is upstream behavior, not something the Feature changes: if the remote user
 
 ## Generated configuration
 
-With `installTui` and `configureDefaults` (default `true`) the Feature writes `~/.config/herdr/config.toml` for the **remote user**, but only when no config file exists yet. Your own config is never overwritten.
+With `installTui` and `configureDefaults` (default `true`) the Feature copies its own [`herdr/config.toml`](https://github.com/bugrasan/devcontainers-features/blob/main/src/herdr/herdr/config.toml) to `~/.config/herdr/config.toml` for the **remote user**, but only when no config file exists yet. Your own config is never overwritten.
 
-The generated file is deliberately **partial**. herdr loads its built-in defaults first and applies the file on top, so every key that is not listed keeps upstream's default, including keys added by future releases. It sets three:
+The copied file is deliberately **partial**. herdr loads its built-in defaults first and applies the file on top, so every key that is not listed keeps upstream's default, including keys added by future releases. It sets three:
 
 | Key | Value | Why |
 |-----|-------|-----|
@@ -58,6 +58,8 @@ The generated file is deliberately **partial**. herdr loads its built-in default
 | `update.manifest_check` | `false` | Stops the background agent-detection manifest fetch from herdr.dev. The manifest bundled with the installed binary is the one that matches it. |
 
 `update.channel` is deliberately left **unset**, so it keeps upstream's `stable` default.
+
+Set `disableTuiUpdates: false` to keep herdr's own update checks: the Feature then drops the `[update]` section from the copied file and still copies `onboarding = false`. This is independent of `disableCoreUpdates`.
 
 Set `configureDefaults: false` to keep the Feature out of the user's home entirely and get herdr's own behavior, background calls included. Print the full commented default config at any time with `herdr --default-config`.
 
@@ -105,7 +107,9 @@ Both are picked up without editing any shell rc file: `bash-completion` lazy-loa
 
 - Upstream's script installs `herdr-core` plus an `hc` link, but only when no other `hc` exists (some window managers ship one). The Feature installs the herdr-core skill either way. It tells agents to run `hc`, so it only works where `hc` is herdr-core.
 - On a fresh install, nothing is started. The core starts on first use of `hc`, as the user who runs it.
-- `hc` contacts `releases.herdr.dev` only on an explicit `hc update` or `hc machine add`, so no config is seeded.
+- `hc` contacts `releases.herdr.dev` only on an explicit `hc update` or `hc machine add`. It never updates itself in the background.
+- **Workaround:** herdr-core has no config key to switch off `hc update` yet. The Feature sets `HERDR_RELEASES_URL` to an empty string in `containerEnv`, so `hc` has no release server: `hc update` fails with `cannot download`, and rebuilding the image is the update path. This also stops `hc machine add` from downloading a core for another machine. To update or add a machine anyway, run it with the real server, for example `HERDR_RELEASES_URL=https://releases.herdr.dev hc update`. The setting applies to the whole container, also with `installCore: false`.
+- Set `disableCoreUpdates: false` to allow `hc update` again. A Feature's `containerEnv` cannot depend on an option, so the empty variable stays in `containerEnv` and the Feature unsets it in `/etc/profile.d/herdr-core-updates.sh`, `/etc/bash.bashrc`, and `/etc/zsh/zshenv` (or `/etc/zshenv` when zsh is installed without `/etc/zsh`). This covers login shells, interactive bash, and every zsh, including VS Code terminals. A process started without such a shell, for example `docker exec <container> hc update`, still sees the empty value. This is independent of `disableTuiUpdates`.
 
 ```bash
 hc run --bg --name web npm run dev   # start a program that outlives this shell

@@ -56,5 +56,24 @@
                 "skillCopilot": false
             }
         }
+    },
+    "tui_updates_enabled": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "remoteUser": "vscode",
+        "features": {
+            "herdr": {
+                "disableTuiUpdates": false,
+                "installCore": false
+            }
+        }
+    },
+    "core_updates_enabled": {
+        "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+        "remoteUser": "vscode",
+        "features": {
+            "herdr": {
+                "disableCoreUpdates": false
+            }
+        }
     }
 }

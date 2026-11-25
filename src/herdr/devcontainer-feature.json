@@ -2,7 +2,7 @@
     // https://containers.dev/implementors/features/
     "name": "herdr",
     "id": "herdr",
-    "version": "3.0.0",
+    "version": "3.1.0",
     "description": "Installs the herdr TUI ('herdr') and herdr-core ('hc') by running upstream's official install scripts unchanged, both optional, into the remote user's ~/.local/bin. Seeds a container-friendly herdr config, adds bash/zsh completions, and installs agent skills for Claude Code and GitHub Copilot CLI.",
     "documentationURL": "https://github.com/herdrdev/herdr",
     "keywords": ["herdr", "herdr-core", "hc", "terminal", "multiplexer", "tui", "coding-agents", "cli"],
@@ -15,7 +15,12 @@
         "configureDefaults": {
             "type": "boolean",
             "default": true,
-            "description": "With 'installTui': write a container-friendly ~/.config/herdr/config.toml for the remote user (only when no config file exists yet). It sets three keys: 'onboarding = false' skips the first-run wizard, and '[update] version_check = false' plus 'manifest_check = false' stop a disposable container from phoning home to herdr.dev in the background. Set to false to leave configuration entirely to herdr's own defaults."
+            "description": "With 'installTui': copy the Feature's container-friendly herdr/config.toml to ~/.config/herdr/config.toml for the remote user (only when no config file exists yet). It sets three keys: 'onboarding = false' skips the first-run wizard, and '[update] version_check = false' plus 'manifest_check = false' stop a disposable container from phoning home to herdr.dev in the background. Set to false to leave configuration entirely to herdr's own defaults."
+        },
+        "disableTuiUpdates": {
+            "type": "boolean",
+            "default": true,
+            "description": "With 'installTui' and 'configureDefaults': keep the '[update]' section (version_check = false, manifest_check = false) in the copied config, so herdr does not check herdr.dev for a newer release or agent manifest. Set to false to drop that section and keep herdr's own update checks; 'onboarding = false' is copied either way."
         },
         "installCompletions": {
             "type": "boolean",
@@ -41,6 +46,11 @@
             ],
             "description": "With 'installCore': herdr-core release to install, 'latest', or an exact version like '0.1.21' (a leading 'v' is accepted too). Passed to upstream's script as HC_VERSION."
         },
+        "disableCoreUpdates": {
+            "type": "boolean",
+            "default": true,
+            "description": "Block 'hc update' and 'hc machine add' downloads through the empty HERDR_RELEASES_URL that this Feature sets in containerEnv (workaround: herdr-core has no config key for this yet). Set to false to unset the variable again in shells (/etc/profile.d, /etc/bash.bashrc, and /etc/zsh/zshenv), so 'hc update' reaches releases.herdr.dev. Applies whether or not 'installCore' is set."
+        },
         "installCoreSkill": {
             "type": "boolean",
             "default": true,
@@ -56,6 +66,12 @@
             "default": true,
             "description": "Install the enabled agent skills for GitHub Copilot CLI, at ~/.copilot/skills/<name>/SKILL.md for the remote user."
         },
+    },
+    // WORKAROUND: herdr-core has no config key to disable 'hc update' yet; an
+    // empty HERDR_RELEASES_URL blocks it. 'disableCoreUpdates: false' unsets it
+    // in shells (install.sh). Remove once upstream adds a config key.
+    "containerEnv": {
+        "HERDR_RELEASES_URL": ""
     },
     // No functional dependency - the Linux release asset is a statically
     // linked (musl, static-PIE) Rust binary with no libc requirement.

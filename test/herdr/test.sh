@@ -42,7 +42,7 @@ check "herdr status runs" bash -c "herdr status"
 check "herdr --default-config runs" bash -c "herdr --default-config | grep -q '^\[update\]'"
 
 # configureDefaults defaults to true, so the remote user gets a config.
-check "config generated for the remote user" bash -c "test -f '${CONFIG}'"
+check "config copied for the remote user" bash -c "test -f '${CONFIG}'"
 check "config is owned by the remote user" bash -c "test -O '${CONFIG}'"
 check "onboarding wizard disabled" bash -c "grep -qx 'onboarding = false' '${CONFIG}'"
 check "background version check disabled" bash -c "grep -qx 'version_check = false' '${CONFIG}'"
@@ -85,6 +85,17 @@ check "zsh completion is a compdef for herdr" bash -c "head -1 '${ZSH_COMPLETION
 # installCore defaults to true: herdr-core.
 check "herdr-core installed at ~/.local/bin/herdr-core" bash -c "test -x '${HOME}/.local/bin/herdr-core'"
 check "herdr-core --version" bash -c "herdr-core --version | grep -qE '^hc [0-9]+\.[0-9]+\.[0-9]+'"
+
+# Workaround: containerEnv sets HERDR_RELEASES_URL="" to block 'hc update'.
+check "HERDR_RELEASES_URL is set and empty" bash -c '[ "${HERDR_RELEASES_URL+set}" = set ] && [ -z "${HERDR_RELEASES_URL}" ]'
+check "hc update is blocked" bash -c '
+    out="$(herdr-core update 2>&1)" && { echo "hc update succeeded: ${out}"; exit 1; }
+    echo "${out}" | grep -q "cannot download" || { echo "unexpected: ${out}"; exit 1; }'
+check "workaround also active in login and interactive shells" bash -c '
+    for sh in "bash -lc" "bash -ic"; do
+        $sh "[ \"\${HERDR_RELEASES_URL+set}\" = set ] && [ -z \"\${HERDR_RELEASES_URL}\" ]" </dev/null || { echo "not set in: ${sh}"; exit 1; }
+    done'
+check "no opt-out written" bash -c "! test -e /etc/profile.d/herdr-core-updates.sh && ! grep -q HERDR_RELEASES_URL /etc/bash.bashrc"
 
 # installCoreSkill, skillClaudeCode and skillCopilot default to true: the same
 # herdr-core skill for both agents, owned by the remote user.
